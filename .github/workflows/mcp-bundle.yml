@@ -278,6 +278,18 @@ jobs:
             cp -r node_modules "$STAGING/"
           fi
 
+          if [ -f "requirements.txt" ] && [ "$SERVER_TYPE" = "python" ]; then
+            cp requirements.txt "$STAGING/"
+          fi
+
+          if [ -f "pyproject.toml" ] && [ "$SERVER_TYPE" = "uv" ]; then
+            cp pyproject.toml "$STAGING/"
+          fi
+
+          if [ -f "LICENSE" ]; then
+            cp LICENSE "$STAGING/"
+          fi
+
           # Auto-include .mcpbignore if present
           if [ -f ".mcpbignore" ]; then
             cp ".mcpbignore" "$STAGING/"

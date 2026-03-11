@@ -545,6 +545,34 @@ else
 		"missing test-manifest-validation ref"
 fi
 
+# --- Server-type auto-include tests ---
+echo ""
+echo "-- Server-type auto-include tests --"
+
+# workflow auto-includes requirements.txt for python
+if grep -q 'requirements.txt.*python' "$WORKFLOW"; then
+	pass "workflow auto-includes requirements.txt for python"
+else
+	fail "workflow" \
+		"missing requirements.txt auto-include"
+fi
+
+# workflow auto-includes pyproject.toml for uv
+if grep -q 'pyproject.toml.*uv' "$WORKFLOW"; then
+	pass "workflow auto-includes pyproject.toml for uv"
+else
+	fail "workflow" \
+		"missing pyproject.toml auto-include"
+fi
+
+# workflow auto-includes LICENSE for all types
+if grep -q 'LICENSE.*STAGING' "$WORKFLOW"; then
+	pass "workflow auto-includes LICENSE"
+else
+	fail "workflow" \
+		"missing LICENSE auto-include"
+fi
+
 # ── Summary ──
 echo ""
 printf '\033[1;33m=== Results ===\033[0m\n'

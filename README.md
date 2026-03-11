@@ -171,7 +171,7 @@ Run the test suite:
 ./tests/test-manifest-validation.sh
 ```
 
-The test suite (73 tests) covers:
+The test suite (76 tests) covers:
 - Manifest validation: required fields, semver, server types, UV version constraint, platforms, config types, variable substitution refs, duplicate tools
 - JSON structure validation for all fixtures
 - Workflow and action YAML structure verification
