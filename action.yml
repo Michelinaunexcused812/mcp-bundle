@@ -82,7 +82,6 @@ runs:
           exit 1
         fi
 
-        # Shared validation logic (canonical source: scripts/validate-manifest.sh)
         # shellcheck source=scripts/validate-manifest.sh
         source "$GITHUB_ACTION_PATH/scripts/validate-manifest.sh"
 
@@ -142,6 +141,10 @@ runs:
             pattern=$(echo "$pattern" | sed 's/^[[:space:]]*//' | sed 's/[[:space:]]*$//')
             [ -z "$pattern" ] && continue
             [[ "$pattern" == \#* ]] && continue
+            if [[ "$pattern" == \!* ]]; then
+              echo "::warning::.mcpbignore negation pattern not supported (skipped): ${pattern}"
+              continue
+            fi
             if [[ "$pattern" == */ ]]; then
               EXCLUDES+=("${pattern}*")
             else

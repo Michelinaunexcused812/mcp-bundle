@@ -121,6 +121,31 @@ Run `/mcpb` in a project directory containing an MCP server. The skill will:
 | `bundle-sha256` | SHA-256 checksum of the bundle |
 | `manifest-valid` | Whether manifest validation passed (`true`/`false`) |
 
+## Composite Action Reference
+
+The composite action bundles the entire working directory (you handle checkout, build, and file selection in prior steps). Use `.mcpbignore` to exclude files.
+
+### Inputs
+
+| Input | Type | Required | Default | Description |
+|-------|------|----------|---------|-------------|
+| `manifest-path` | string | no | `manifest.json` | Path to manifest.json |
+| `node-version` | string | no | `"18"` | Node.js version for build environment |
+| `build-command` | string | no | `npm run build` | Build command to run before packaging |
+| `test-command` | string | no | `npm test` | Test command (empty string to skip) |
+| `bundle-name` | string | no | `""` | Override bundle output filename |
+| `upload-artifact` | string | no | `"true"` | Upload bundle as GitHub Actions artifact |
+| `create-release-asset` | string | no | `"false"` | Attach bundle to GitHub Release (tag pushes only) |
+| `mcpb-version` | string | no | `latest` | Version of mcpb toolchain |
+
+### Outputs
+
+| Output | Description |
+|--------|-------------|
+| `bundle-path` | Path to the generated `.mcpb` bundle file |
+| `bundle-sha256` | SHA-256 checksum of the bundle |
+| `manifest-valid` | Whether manifest validation passed (`true`/`false`) |
+
 ### Manifest Validation Checks
 
 Both the reusable workflow and composite action perform these 11 validation checks:
@@ -192,10 +217,10 @@ __pycache__/
 ```
 
 - Blank lines and lines starting with `#` are ignored
-- Patterns ending with `/` match directories
-- All other patterns match by filename
-
-The reusable workflow applies exclusions by pruning from the staging directory before packaging. The composite action passes them as `-x` arguments to `zip`.
+- Patterns ending with `/` match directories anywhere in the bundle (e.g. `__pycache__/`)
+- Patterns containing `/` (not trailing) match path-relative files (e.g. `dist/debug.log`)
+- All other patterns match by filename at any depth (e.g. `*.log`)
+- Negation patterns (`!pattern`) are not supported and are skipped with a warning
 
 ## Security Considerations
 

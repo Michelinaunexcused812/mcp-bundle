@@ -262,7 +262,6 @@ jobs:
             cp LICENSE "$STAGING/"
           fi
 
-          # Auto-include .mcpbignore if present
           if [ -f ".mcpbignore" ]; then
             cp ".mcpbignore" "$STAGING/"
           fi
@@ -285,6 +284,10 @@ jobs:
             pattern=$(echo "$pattern" | sed 's/^[[:space:]]*//' | sed 's/[[:space:]]*$//')
             [ -z "$pattern" ] && continue
             [[ "$pattern" == \#* ]] && continue
+            if [[ "$pattern" == \!* ]]; then
+              echo "::warning::.mcpbignore negation pattern not supported (skipped): ${pattern}"
+              continue
+            fi
             if [[ "$pattern" == */ ]]; then
               dirpat="${pattern%/}"
               if [[ "$dirpat" == */* ]]; then

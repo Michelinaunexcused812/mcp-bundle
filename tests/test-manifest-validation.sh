@@ -1196,6 +1196,78 @@ else
 		"non-excluded files were incorrectly removed"
 fi
 
+# --- .mcpbignore negation pattern tests ---
+echo ""
+echo "-- .mcpbignore negation pattern tests --"
+
+# workflow warns and skips negation patterns (not silently misapplied)
+if grep -q 'negation pattern not supported' "$WORKFLOW"; then
+	pass "workflow warns on .mcpbignore negation patterns"
+else
+	fail "workflow .mcpbignore" \
+		"missing negation pattern warning in Apply .mcpbignore step"
+fi
+
+# action.yml warns and skips negation patterns
+if grep -q 'negation pattern not supported' "$ACTION"; then
+	pass "action.yml warns on .mcpbignore negation patterns"
+else
+	fail "action.yml .mcpbignore" \
+		"missing negation pattern warning in pack step"
+fi
+
+# both emit ::warning:: annotation (not ::error::)
+if grep -q '::warning::.*negation pattern' "$WORKFLOW"; then
+	pass "workflow negation pattern uses ::warning:: annotation"
+else
+	fail "workflow .mcpbignore" \
+		"negation pattern should use ::warning:: not ::error::"
+fi
+if grep -q '::warning::.*negation pattern' "$ACTION"; then
+	pass "action.yml negation pattern uses ::warning:: annotation"
+else
+	fail "action.yml .mcpbignore" \
+		"negation pattern should use ::warning:: not ::error::"
+fi
+
+# both continue (skip pattern) after warning — do not abort
+if grep -A1 'negation pattern not supported' "$WORKFLOW" | grep -q 'continue'; then
+	pass "workflow negation pattern skipped with continue (does not abort)"
+else
+	fail "workflow .mcpbignore" \
+		"negation pattern handler should continue, not abort"
+fi
+if grep -A1 'negation pattern not supported' "$ACTION" | grep -q 'continue'; then
+	pass "action.yml negation pattern skipped with continue (does not abort)"
+else
+	fail "action.yml .mcpbignore" \
+		"negation pattern handler should continue, not abort"
+fi
+
+# Functional: negation pattern detection
+_is_negation() { [[ "$1" == \!* ]]; }
+
+if _is_negation "!important.log"; then
+	pass "negation detection: !important.log identified as negation"
+else
+	fail "negation detection" "!important.log not identified as negation"
+fi
+if _is_negation "!dist/keep.js"; then
+	pass "negation detection: !dist/keep.js identified as negation"
+else
+	fail "negation detection" "!dist/keep.js not identified as negation"
+fi
+if ! _is_negation "*.log"; then
+	pass "negation detection: *.log not treated as negation"
+else
+	fail "negation detection" "*.log incorrectly identified as negation"
+fi
+if ! _is_negation "#comment"; then
+	pass "negation detection: #comment not treated as negation"
+else
+	fail "negation detection" "#comment incorrectly identified as negation"
+fi
+
 # --- Zip fallback bundle validation tests ---
 echo ""
 echo "-- Zip fallback validation tests --"
