@@ -996,10 +996,13 @@ else
 fi
 
 # --- Workflow: sha256sum availability ---
-# Workflow uses sha256sum (GNU coreutils - linux specific)
-# This is fine on ubuntu-latest but may fail on macOS
-if grep -q 'sha256sum' "$WORKFLOW"; then
-	pass "workflow uses sha256sum for checksums"
+# Both workflow and action.yml must have portable sha256 fallback
+if grep -q 'sha256sum' "$WORKFLOW" &&
+	grep -q 'shasum' "$WORKFLOW"; then
+	pass "workflow has portable sha256 fallback (sha256sum || shasum)"
+else
+	fail "workflow capability" \
+		"missing portable sha256 fallback for macOS runners"
 fi
 # action.yml must have portable sha256 fallback (sha256sum || shasum -a 256)
 if grep -q 'sha256sum' "$ACTION" &&

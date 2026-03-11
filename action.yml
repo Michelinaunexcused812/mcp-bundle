@@ -18,14 +18,6 @@ inputs:
     description: Node.js version for build environment
     required: false
     default: '18'
-  build-command:
-    description: Custom build command to run before packaging
-    required: false
-    default: npm run build
-  test-command:
-    description: Custom test command to run before packaging; set to empty string to skip
-    required: false
-    default: npm test
   bundle-name:
     description: Override bundle output filename (defaults to name from manifest.json)
     required: false

@@ -131,8 +131,6 @@ The composite action bundles the entire working directory (you handle checkout, 
 |-------|------|----------|---------|-------------|
 | `manifest-path` | string | no | `manifest.json` | Path to manifest.json |
 | `node-version` | string | no | `"18"` | Node.js version for build environment |
-| `build-command` | string | no | `npm run build` | Build command to run before packaging |
-| `test-command` | string | no | `npm test` | Test command (empty string to skip) |
 | `bundle-name` | string | no | `""` | Override bundle output filename |
 | `upload-artifact` | string | no | `"true"` | Upload bundle as GitHub Actions artifact |
 | `create-release-asset` | string | no | `"false"` | Attach bundle to GitHub Release (tag pushes only) |
@@ -209,11 +207,10 @@ Create a `.mcpbignore` file in your repository root to exclude files from the bu
 
 ```text
 # Comments start with #
-*.log
-*.tmp
-tests/
-docs/
-__pycache__/
+*.log                # basename: matches *.log at any depth
+dist/debug.log       # path-relative: only dist/debug.log
+tests/               # directory: removes tests/ anywhere
+__pycache__/         # directory: removes all __pycache__ dirs
 ```
 
 - Blank lines and lines starting with `#` are ignored
