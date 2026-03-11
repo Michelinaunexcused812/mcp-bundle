@@ -96,6 +96,10 @@ jobs:
         env:
           MANIFEST: ${{ inputs.manifest-path }}
         run: |
+          if [ ! -f "$MANIFEST" ]; then
+            echo "::error::Manifest not found: $MANIFEST"
+            exit 1
+          fi
           SERVER_TYPE=$(jq -r '.server.type' "$MANIFEST")
           echo "server-type=$SERVER_TYPE" >> "$GITHUB_OUTPUT"
 
@@ -133,6 +137,9 @@ jobs:
         id: validate
         env:
           MANIFEST: ${{ inputs.manifest-path }}
+        # NOTE: This validation logic mirrors scripts/validate-manifest.sh.
+        # The reusable workflow runs in the caller's repo context so it cannot
+        # source from $GITHUB_ACTION_PATH. Keep both in sync on changes.
         run: |
           if [ ! -f "$MANIFEST" ]; then
             echo "::error::Manifest file not found: $MANIFEST"
@@ -203,6 +210,15 @@ jobs:
             fi
           done
 
+          TOOL_MISSING=$(jq -r '
+            .tools[]? |
+            select((.name // "") == "" or (.description // "") == "") |
+            .name // "(unnamed)"
+          ' "$MANIFEST" 2>/dev/null || true)
+          if [ -n "$TOOL_MISSING" ]; then
+            ERRORS+="Tool missing name or description: ${TOOL_MISSING}\n"
+          fi
+
           DUPS=$(jq -r '[.tools[]?.name] | group_by(.) | map(select(length > 1)) | .[0][0] // empty' "$MANIFEST" 2>/dev/null)
           if [ -n "$DUPS" ]; then
             ERRORS+="Duplicate tool name: ${DUPS}\n"
@@ -266,6 +282,8 @@ jobs:
 
           IFS=',' read -ra SRCS <<< "$SOURCE_FILES"
           for pat in "${SRCS[@]}"; do
+            pat=$(echo "$pat" | xargs)
+            [ -z "$pat" ] && continue
             copy_glob "$pat" "$STAGING"
           done
 
@@ -346,8 +364,12 @@ jobs:
           else
             BNAME=$(jq -r '.name' "$MANIFEST")
           fi
+          # Strip path separators and leading dots to prevent path traversal
+          BNAME=$(echo "$BNAME" | tr -d '/' | sed 's/^\.\+//')
 
           VERSION=$(jq -r '.version' "$MANIFEST")
+          VERSION=$(echo "$VERSION" | tr -cd 'a-zA-Z0-9._+-')
+
           BUNDLE_FILE="${BNAME}-${VERSION}.mcpb"
 
           cd "$STAGING"

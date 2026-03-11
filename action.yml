@@ -74,6 +74,10 @@ runs:
       env:
         MANIFEST: ${{ inputs.manifest-path }}
       run: |
+        if [ ! -f "$MANIFEST" ]; then
+          echo "::error::Manifest not found: $MANIFEST"
+          exit 1
+        fi
         SERVER_TYPE=$(jq -r '.server.type' "$MANIFEST")
         echo "server-type=$SERVER_TYPE" >> "$GITHUB_OUTPUT"
 
@@ -89,77 +93,20 @@ runs:
           exit 1
         fi
 
-        ERRORS=""
+        # Shared validation logic (canonical source: scripts/validate-manifest.sh)
+        # shellcheck source=scripts/validate-manifest.sh
+        source "$GITHUB_ACTION_PATH/scripts/validate-manifest.sh"
 
-        check_field() {
-          local value
-          value=$(jq -r "$1 // empty" "$MANIFEST")
-          if [ -z "$value" ]; then
-            ERRORS+="Missing required field: $1\n"
-          fi
-        }
-
-        check_field '.manifest_version'
-        check_field '.name'
-        check_field '.version'
-        check_field '.description'
-        check_field '.author.name'
-        check_field '.server.type'
-        check_field '.server.entry_point'
-
-        SERVER_TYPE=$(jq -r '.server.type' "$MANIFEST")
-        case "$SERVER_TYPE" in
-          node|python|binary|uv) ;;
-          *) ERRORS+="Invalid server type: ${SERVER_TYPE}\n" ;;
-        esac
-
-        VERSION=$(jq -r '.version' "$MANIFEST")
-        if ! echo "$VERSION" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9.]+)?(\+[a-zA-Z0-9.]+)?$'; then
-          ERRORS+="Invalid version (not semver): ${VERSION}\n"
-        fi
-
-        MANIFEST_VER=$(jq -r '.manifest_version' "$MANIFEST")
-        if [ "$SERVER_TYPE" = "uv" ] && [ "$MANIFEST_VER" != "0.4" ]; then
-          ERRORS+="UV server type requires manifest_version 0.4, got: ${MANIFEST_VER}\n"
-        fi
-
-        PLATFORMS=$(jq -r '.compatibility.platforms[]? // empty' "$MANIFEST" 2>/dev/null)
-        for p in $PLATFORMS; do
-          case "$p" in
-            darwin|win32|linux) ;;
-            *) ERRORS+="Invalid platform: ${p}\n" ;;
-          esac
-        done
-
-        ENTRY=$(jq -r '.server.entry_point' "$MANIFEST")
+        ENTRY=$(jq -r '.server.entry_point // empty' "$MANIFEST")
         if [ -n "$ENTRY" ] && [ ! -f "$ENTRY" ]; then
           echo "::warning::Entry point not found: ${ENTRY} (expected if build produces it)"
         fi
 
-        CONFIG_TYPES=$(jq -r '.user_config // {} | to_entries[] | .value.type // empty' "$MANIFEST" 2>/dev/null || true)
-        for t in $CONFIG_TYPES; do
-          case "$t" in
-            string|number|boolean|directory|file) ;;
-            *) ERRORS+="Invalid user_config type: ${t}\n" ;;
-          esac
-        done
-
-        USED_VARS=$(jq -r '[.server.mcp_config.args[]?, (.server.mcp_config.env // {} | to_entries[] | .value)] | map(select(test("\\$\\{user_config\\."))) | map(capture("\\$\\{user_config\\.(?<key>[^}]+)\\}") | .key) | unique[]' "$MANIFEST" 2>/dev/null || true)
-        for var in $USED_VARS; do
-          HAS_CONFIG=$(jq -r ".user_config.\"$var\" // empty" "$MANIFEST")
-          if [ -z "$HAS_CONFIG" ]; then
-            ERRORS+="Variable \${user_config.${var}} referenced but not defined in user_config\n"
-          fi
-        done
-
-        DUPS=$(jq -r '[.tools[]?.name] | group_by(.) | map(select(length > 1)) | .[0][0] // empty' "$MANIFEST" 2>/dev/null)
-        if [ -n "$DUPS" ]; then
-          ERRORS+="Duplicate tool name: ${DUPS}\n"
-        fi
-
-        if [ -n "$ERRORS" ]; then
+        if ! ERRORS=$(validate_manifest "$MANIFEST"); then
           echo "::error::Manifest validation failed:"
-          printf "%b" "$ERRORS"
+          printf "%b" "$ERRORS" | while IFS= read -r line; do
+            echo "::error::  $line"
+          done
           echo "valid=false" >> "$GITHUB_OUTPUT"
           exit 1
         fi
@@ -190,8 +137,12 @@ runs:
         else
           BNAME=$(jq -r '.name' "$MANIFEST")
         fi
+        # Strip path separators and leading dots to prevent path traversal
+        BNAME=$(echo "$BNAME" | tr -d '/' | sed 's/^\.\+//')
 
         VERSION=$(jq -r '.version' "$MANIFEST")
+        VERSION=$(echo "$VERSION" | tr -cd 'a-zA-Z0-9._+-')
+
         BUNDLE_FILE="${BNAME}-${VERSION}.mcpb"
 
         EXCLUDES=("*.git*" "node_modules/*")

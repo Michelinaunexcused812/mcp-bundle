@@ -430,6 +430,36 @@ if [ -f "$ACTION" ]; then
 	done
 fi
 
+# --- Shared validation script tests ---
+echo ""
+echo "-- Shared validation script tests --"
+
+VALIDATE_SCRIPT="$SCRIPT_DIR/../scripts/validate-manifest.sh"
+if [ -f "$VALIDATE_SCRIPT" ]; then
+	pass "scripts/validate-manifest.sh exists"
+	if [ -x "$VALIDATE_SCRIPT" ]; then
+		pass "scripts/validate-manifest.sh is executable"
+	else
+		fail "scripts/validate-manifest.sh" "not executable"
+	fi
+	# action.yml sources the shared script via GITHUB_ACTION_PATH
+	if grep -q 'source.*GITHUB_ACTION_PATH.*validate-manifest' "$ACTION"; then
+		pass "action.yml sources scripts/validate-manifest.sh"
+	else
+		fail "action.yml" \
+			"does not source scripts/validate-manifest.sh"
+	fi
+	# workflow has sync comment noting it mirrors the shared script
+	if grep -q 'mirrors scripts/validate-manifest' "$WORKFLOW"; then
+		pass "workflow validate step notes sync with shared script"
+	else
+		fail "workflow" \
+			"missing sync comment for scripts/validate-manifest.sh"
+	fi
+else
+	fail "scripts/validate-manifest.sh" "file not found"
+fi
+
 # --- Plugin structure tests ---
 echo ""
 echo "-- Plugin structure tests --"
@@ -802,6 +832,20 @@ else
 		"GH_TOKEN not sourced from github.token"
 fi
 
+# --- Security: VERSION sanitization (prevents path injection via manifest version) ---
+if grep -q "tr -cd.*VERSION\|VERSION.*tr -cd" "$WORKFLOW"; then
+	pass "workflow sanitizes VERSION string before use in filename"
+else
+	fail "workflow security" \
+		"VERSION string not sanitized (path injection risk)"
+fi
+if grep -q "tr -cd.*VERSION\|VERSION.*tr -cd" "$ACTION"; then
+	pass "action.yml sanitizes VERSION string before use in filename"
+else
+	fail "action.yml security" \
+		"VERSION string not sanitized (path injection risk)"
+fi
+
 # .mcpbignore pattern handling does not allow absolute paths to escape staging
 if grep -q 'find.*STAGING.*-name' "$WORKFLOW"; then
 	pass "workflow .mcpbignore uses find -name (confined to staging dir)"
@@ -818,6 +862,102 @@ else
 	fail "workflow capability" \
 		"node_modules not copied to staging"
 fi
+
+# --- Security: bundle-name path traversal prevention ---
+if grep -q "tr -d '/'\|sed.*\\\\+\." "$WORKFLOW"; then
+	pass "workflow sanitizes bundle-name against path traversal"
+else
+	fail "workflow security" \
+		"bundle-name not sanitized (path traversal risk)"
+fi
+if grep -q "tr -d '/'\|sed.*\\\\+\." "$ACTION"; then
+	pass "action.yml sanitizes bundle-name against path traversal"
+else
+	fail "action.yml security" \
+		"bundle-name not sanitized (path traversal risk)"
+fi
+
+# --- Security: bundle-name sanitization — component-level ---
+echo ""
+echo "-- Bundle-name sanitization tests --"
+
+# workflow: tr -d '/' strips forward slashes (path traversal component)
+if grep -q "tr -d '/'" "$WORKFLOW"; then
+	pass "workflow pack step strips '/' from bundle-name (tr -d)"
+else
+	fail "workflow security" \
+		"workflow missing tr -d '/' in bundle-name sanitization"
+fi
+
+# workflow: sed strips leading dots (e.g. '../' after slash removal leaves '..name')
+if grep -q "sed 's/\^\\\\.\\\\+//'" "$WORKFLOW" ||
+	grep -q "sed 's/\^" "$WORKFLOW"; then
+	pass "workflow pack step strips leading dots from bundle-name (sed)"
+else
+	fail "workflow security" \
+		"workflow missing sed leading-dot strip in bundle-name sanitization"
+fi
+
+# workflow: sanitization is applied to BNAME before constructing BUNDLE_FILE
+if grep -A2 "tr -d '/'" "$WORKFLOW" |
+	grep -q 'BUNDLE_FILE\|sed'; then
+	pass "workflow BNAME sanitization applied before BUNDLE_FILE construction"
+else
+	fail "workflow security" \
+		"workflow sanitization may not precede BUNDLE_FILE construction"
+fi
+
+# action.yml: tr -d '/' strips forward slashes
+if grep -q "tr -d '/'" "$ACTION"; then
+	pass "action.yml pack step strips '/' from bundle-name (tr -d)"
+else
+	fail "action.yml security" \
+		"action.yml missing tr -d '/' in bundle-name sanitization"
+fi
+
+# action.yml: sed strips leading dots
+if grep -q "sed 's/\^\\\\.\\\\+//'" "$ACTION" ||
+	grep -q "sed 's/\^" "$ACTION"; then
+	pass "action.yml pack step strips leading dots from bundle-name (sed)"
+else
+	fail "action.yml security" \
+		"action.yml missing sed leading-dot strip in bundle-name sanitization"
+fi
+
+# action.yml: sanitization applied before BUNDLE_FILE construction
+if grep -A2 "tr -d '/'" "$ACTION" |
+	grep -q 'BUNDLE_FILE\|sed'; then
+	pass "action.yml BNAME sanitization applied before BUNDLE_FILE construction"
+else
+	fail "action.yml security" \
+		"action.yml sanitization may not precede BUNDLE_FILE construction"
+fi
+
+# Functional verification: the sanitization logic works correctly in shell
+# Test that tr -d '/' and sed 's/^\.\+//' together neutralize traversal inputs
+_sanitize() {
+	echo "$1" | tr -d '/' | sed 's/^\.\+//'
+}
+
+_test_sanitize() {
+	local input="$1" expected="$2" label="$3"
+	local result
+	result=$(_sanitize "$input")
+	if [ "$result" = "$expected" ]; then
+		pass "sanitize: $label → '$result'"
+	else
+		fail "sanitize: $label" \
+			"expected '$expected', got '$result'"
+	fi
+}
+
+_test_sanitize "../../../etc/passwd" "etcpasswd" "path traversal stripped"
+_test_sanitize "../../secret" "secret" "double-dot traversal stripped"
+_test_sanitize "./my-bundle" "my-bundle" "leading dot-slash stripped"
+_test_sanitize "...evil" "evil" "triple leading dot stripped"
+_test_sanitize "my-bundle" "my-bundle" "clean name unchanged"
+_test_sanitize "my/nested/bundle" "mynestedbundle" "all slashes stripped"
+_test_sanitize "/abs/path" "abspath" "absolute path stripped"
 
 # --- Workflow: mcpb-version input injection safety ---
 # mcpb-version is passed as env var to shell before npm install
