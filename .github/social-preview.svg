@@ -1,0 +1,90 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 640" width="1280" height="640">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#1a1a2e"/>
+      <stop offset="50%" style="stop-color:#16213e"/>
+      <stop offset="100%" style="stop-color:#0f3460"/>
+    </linearGradient>
+    <linearGradient id="accent" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#e94560"/>
+      <stop offset="100%" style="stop-color:#f5a623"/>
+    </linearGradient>
+    <filter id="glow">
+      <feGaussianBlur stdDeviation="3" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+
+  <!-- Background -->
+  <rect width="1280" height="640" fill="url(#bg)"/>
+
+  <!-- Grid pattern -->
+  <g opacity="0.05" stroke="#ffffff" stroke-width="1">
+    <line x1="0" y1="80" x2="1280" y2="80"/>
+    <line x1="0" y1="160" x2="1280" y2="160"/>
+    <line x1="0" y1="240" x2="1280" y2="240"/>
+    <line x1="0" y1="320" x2="1280" y2="320"/>
+    <line x1="0" y1="400" x2="1280" y2="400"/>
+    <line x1="0" y1="480" x2="1280" y2="480"/>
+    <line x1="0" y1="560" x2="1280" y2="560"/>
+    <line x1="160" y1="0" x2="160" y2="640"/>
+    <line x1="320" y1="0" x2="320" y2="640"/>
+    <line x1="480" y1="0" x2="480" y2="640"/>
+    <line x1="640" y1="0" x2="640" y2="640"/>
+    <line x1="800" y1="0" x2="800" y2="640"/>
+    <line x1="960" y1="0" x2="960" y2="640"/>
+    <line x1="1120" y1="0" x2="1120" y2="640"/>
+  </g>
+
+  <!-- Accent line at top -->
+  <rect x="0" y="0" width="1280" height="4" fill="url(#accent)"/>
+
+  <!-- Package icon -->
+  <g transform="translate(540, 120)" filter="url(#glow)">
+    <rect x="0" y="20" width="200" height="140" rx="8" fill="none" stroke="#e94560" stroke-width="3" opacity="0.8"/>
+    <polyline points="0,60 100,20 200,60" fill="none" stroke="#e94560" stroke-width="3" opacity="0.8"/>
+    <line x1="100" y1="20" x2="100" y2="160" stroke="#e94560" stroke-width="2" opacity="0.4"/>
+    <line x1="0" y1="60" x2="200" y2="60" stroke="#e94560" stroke-width="2" opacity="0.4"/>
+    <!-- Arrow into box -->
+    <line x1="100" y1="-20" x2="100" y2="30" stroke="#f5a623" stroke-width="3"/>
+    <polyline points="85,15 100,30 115,15" fill="none" stroke="#f5a623" stroke-width="3"/>
+  </g>
+
+  <!-- Title -->
+  <text x="640" y="330" text-anchor="middle" fill="#ffffff" font-family="system-ui, -apple-system, sans-serif" font-size="64" font-weight="700" letter-spacing="-1">mcp-bundle</text>
+
+  <!-- Subtitle -->
+  <text x="640" y="385" text-anchor="middle" fill="#a0aec0" font-family="system-ui, -apple-system, sans-serif" font-size="24" font-weight="400">Package MCP Servers into MCPB Bundles</text>
+
+  <!-- Feature pills -->
+  <g transform="translate(640, 440)" text-anchor="middle">
+    <!-- Pill 1 -->
+    <rect x="-380" y="-18" width="160" height="36" rx="18" fill="#e94560" opacity="0.2" stroke="#e94560" stroke-width="1"/>
+    <text x="-300" y="6" fill="#e94560" font-family="system-ui, sans-serif" font-size="14" font-weight="600">Claude Code Plugin</text>
+    <!-- Pill 2 -->
+    <rect x="-180" y="-18" width="160" height="36" rx="18" fill="#f5a623" opacity="0.2" stroke="#f5a623" stroke-width="1"/>
+    <text x="-100" y="6" fill="#f5a623" font-family="system-ui, sans-serif" font-size="14" font-weight="600">GitHub Actions</text>
+    <!-- Pill 3 -->
+    <rect x="20" y="-18" width="160" height="36" rx="18" fill="#4fc3f7" opacity="0.2" stroke="#4fc3f7" stroke-width="1"/>
+    <text x="100" y="6" fill="#4fc3f7" font-family="system-ui, sans-serif" font-size="14" font-weight="600">Manifest Validation</text>
+    <!-- Pill 4 -->
+    <rect x="220" y="-18" width="160" height="36" rx="18" fill="#66bb6a" opacity="0.2" stroke="#66bb6a" stroke-width="1"/>
+    <text x="300" y="6" fill="#66bb6a" font-family="system-ui, sans-serif" font-size="14" font-weight="600">CI/CD Automation</text>
+  </g>
+
+  <!-- Server types -->
+  <g transform="translate(640, 510)" text-anchor="middle">
+    <text x="0" y="0" fill="#718096" font-family="monospace" font-size="16">node  ·  python  ·  binary  ·  uv</text>
+  </g>
+
+  <!-- Bottom bar -->
+  <rect x="0" y="580" width="1280" height="60" fill="rgba(0,0,0,0.3)"/>
+  <text x="60" y="616" fill="#718096" font-family="system-ui, sans-serif" font-size="16">zircote/mcp-bundle</text>
+  <text x="1220" y="616" text-anchor="end" fill="#718096" font-family="system-ui, sans-serif" font-size="16">MIT License</text>
+
+  <!-- Accent line at bottom -->
+  <rect x="0" y="636" width="1280" height="4" fill="url(#accent)"/>
+</svg>

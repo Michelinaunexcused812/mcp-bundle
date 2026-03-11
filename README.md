@@ -1,5 +1,10 @@
 # mcp-bundle
 
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![GitHub Actions](https://img.shields.io/badge/GitHub%20Actions-Marketplace-2088FF?logo=github-actions&logoColor=white)](https://github.com/zircote/mcp-bundle)
+[![Claude Code Plugin](https://img.shields.io/badge/Claude%20Code-Plugin-orange?logo=data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCI+PHBhdGggZmlsbD0id2hpdGUiIGQ9Ik0xMiAyQzYuNDggMiAyIDYuNDggMiAxMnM0LjQ4IDEwIDEwIDEwIDEwLTQuNDggMTAtMTBTMTcuNTIgMiAxMiAyeiIvPjwvc3ZnPg==)](https://github.com/zircote/mcp-bundle)
+[![MCP](https://img.shields.io/badge/MCP-Server%20Packaging-blueviolet)](https://github.com/anthropics/mcpb)
+
 A Claude Code plugin and GitHub Actions workflow for generating [MCPB (MCP Bundle)](https://github.com/anthropics/mcpb) packages from MCP server projects.
 
 ## Prerequisites
