@@ -1,0 +1,23 @@
+# Dependencies
+node_modules/
+.fastembed_cache/
+
+# Build
+dist/
+*.mcpb
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+
+# Test
+coverage/
+.nyc_output/
+
+# Environment
+.env
+.env.local

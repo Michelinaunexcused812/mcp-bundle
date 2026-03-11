@@ -1,0 +1,19 @@
+{
+  "name": "mcp-bundle",
+  "version": "1.0.0",
+  "description": "Generate MCPB (MCP Bundle) packages for MCP server projects with manifest validation, bundle packaging, and CI/CD workflow integration.",
+  "author": {
+    "name": "zircote",
+    "url": "https://github.com/zircote"
+  },
+  "repository": "https://github.com/zircote/mcp-bundle",
+  "license": "MIT",
+  "keywords": [
+    "mcpb",
+    "mcp",
+    "mcp-bundle",
+    "mcp-server",
+    "packaging",
+    "github-actions"
+  ]
+}
