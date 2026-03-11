@@ -1903,6 +1903,28 @@ else
 		"advisory should mention mutable tags risk"
 fi
 
+# --- README accuracy tests ---
+echo ""
+echo "-- README accuracy tests --"
+
+README="$SCRIPT_DIR/../README.md"
+
+# Structural: README build-command description mentions "arbitrary" or "untrusted"
+if grep -qi 'arbitrary\|untrusted' "$README"; then
+	pass "README build-command description mentions arbitrary/untrusted execution risk"
+else
+	fail "README accuracy" \
+		"README missing arbitrary/untrusted warning for build-command"
+fi
+
+# Structural: README source-files description mentions fail behavior
+if grep -qi 'Fails\|no files' "$README"; then
+	pass "README source-files description mentions fail behavior on zero matches"
+else
+	fail "README accuracy" \
+		"README source-files description should mention it fails when no files match"
+fi
+
 # ── Summary ──
 echo ""
 printf '\033[1;33m=== Results ===\033[0m\n'

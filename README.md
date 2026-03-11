@@ -100,13 +100,13 @@ Run `/mcpb` in a project directory containing an MCP server. The skill will:
 
 | Input | Type | Required | Default | Description |
 |-------|------|----------|---------|-------------|
-| `source-files` | string | no | `src/**` | Glob pattern(s) for MCP server source files |
+| `source-files` | string | no | `src/**` | Glob pattern(s) for source files (comma-separated). Fails if no files match — ensure patterns match your project layout |
 | `manifest-path` | string | no | `manifest.json` | Path to manifest.json |
 | `config-files` | string | no | `""` | Glob pattern(s) for config files to include |
 | `additional-artifacts` | string | no | `""` | Glob pattern(s) for extra files to bundle |
 | `node-version` | string | no | `"18"` | Node.js version for build environment |
-| `build-command` | string | no | `npm run build` | Build command to run before packaging |
-| `test-command` | string | no | `npm test` | Test command (empty string to skip) |
+| `build-command` | string | no | `npm run build` | Shell command via `bash -c` before packaging. **Arbitrary code execution** — never set from untrusted input |
+| `test-command` | string | no | `npm test` | Shell command via `bash -c` before packaging (empty to skip). **Arbitrary code execution** |
 | `bundle-name` | string | no | `""` | Override bundle output filename |
 | `upload-artifact` | boolean | no | `true` | Upload bundle as GitHub Actions artifact |
 | `create-release-asset` | boolean | no | `false` | Attach bundle to GitHub Release (tag pushes only) |
@@ -197,6 +197,12 @@ The test suite covers:
 - Manifest validation: required fields, semver, server types, UV version constraint, platforms, config types, variable substitution refs, duplicate tools
 - JSON structure validation for all fixtures
 - Workflow and action YAML structure verification
+- Glob pattern sanitization and shell metacharacter rejection
+- Bundle filename sanitization (path-traversal and empty-name guards)
+- Bundle structure validation (manifest.json at root, entry_point presence)
+- `.mcpbignore` pattern matching: basename, path-relative, directory, negation handling
+- `copy_glob()` fail-fast behavior and zero-match detection
+- Security audit: GH_TOKEN sourcing, bash -c vs eval, VERSION/BNAME sanitization
 - Skill file structure and content completeness
 - Example workflow presence and references
 
