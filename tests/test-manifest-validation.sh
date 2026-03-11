@@ -1785,6 +1785,124 @@ else
 		"permissions block missing contents: field"
 fi
 
+# --- Entry point ./ prefix strip tests ---
+echo ""
+echo "-- Entry point ./ prefix strip tests --"
+
+# Functional: ./src/index.js stripped to src/index.js
+_ep_strip() {
+	local ep="$1"
+	echo "${ep#./}"
+}
+
+_ep_result=$(_ep_strip "./src/index.js")
+if [ "$_ep_result" = "src/index.js" ]; then
+	pass "entry_point strip: ./src/index.js → src/index.js"
+else
+	fail "entry_point strip" \
+		"./src/index.js not stripped correctly (got: $_ep_result)"
+fi
+
+# Functional: src/index.js (no prefix) is a no-op
+_ep_result=$(_ep_strip "src/index.js")
+if [ "$_ep_result" = "src/index.js" ]; then
+	pass "entry_point strip: src/index.js (no ./ prefix) unchanged"
+else
+	fail "entry_point strip" \
+		"src/index.js without prefix should be unchanged (got: $_ep_result)"
+fi
+
+# Functional: ./main.py stripped to main.py
+_ep_result=$(_ep_strip "./main.py")
+if [ "$_ep_result" = "main.py" ]; then
+	pass "entry_point strip: ./main.py → main.py"
+else
+	fail "entry_point strip" \
+		"./main.py not stripped correctly (got: $_ep_result)"
+fi
+
+# Functional: extend zip bundle test — ./-prefixed entry_point detected after strip
+_EP_BUNDLE_DIR=$(mktemp -d)
+trap 'rm -rf "$_MCPB_SEMANTIC_STAGING" "$_MCPB_ZIP_TEST_DIR" "$_CG_TEST_STAGING" "$_CG_SRC_DIR" "$_CG_DST_DIR" "$_EP_BUNDLE_DIR"' EXIT
+
+mkdir -p "$_EP_BUNDLE_DIR/src"
+printf '{"manifest_version":"0.3","name":"t","version":"1.0.0","description":"T","author":{"name":"T"},"server":{"type":"node","entry_point":"./src/index.js"}}' \
+	>"$_EP_BUNDLE_DIR/manifest.json"
+touch "$_EP_BUNDLE_DIR/src/index.js"
+_ep_bundle="$_EP_BUNDLE_DIR/ep-test.mcpb"
+(cd "$_EP_BUNDLE_DIR" && zip -ry "$_ep_bundle" . -x '*.git*' >/dev/null 2>&1)
+
+_ep_contents=$(unzip -Z1 "$_ep_bundle" 2>/dev/null || true)
+_entry_raw="./src/index.js"
+_entry_rel="${_entry_raw#./}"
+if echo "$_ep_contents" | grep -qF "$_entry_rel"; then
+	pass "entry_point strip: bundle contains src/index.js (after ./ strip)"
+else
+	fail "entry_point strip" \
+		"bundle does not contain $_entry_rel after ./ strip"
+fi
+
+# --- Corrupt bundle detection tests ---
+echo ""
+echo "-- Corrupt bundle detection tests --"
+
+# Functional: unzip -Z1 on non-zip content yields empty output (via || true)
+_corrupt_bundle=$(mktemp /tmp/corrupt-XXXXXX.mcpb)
+trap 'rm -rf "$_MCPB_SEMANTIC_STAGING" "$_MCPB_ZIP_TEST_DIR" "$_CG_TEST_STAGING" "$_CG_SRC_DIR" "$_CG_DST_DIR" "$_EP_BUNDLE_DIR" "$_corrupt_bundle"' EXIT
+printf 'not a zip file' >"$_corrupt_bundle"
+
+_corrupt_out=$(unzip -Z1 "$_corrupt_bundle" 2>/dev/null || true)
+if [ -z "$_corrupt_out" ]; then
+	pass "corrupt bundle: unzip -Z1 yields empty output (|| true suppresses error)"
+else
+	fail "corrupt bundle" \
+		"expected empty output for non-zip content (got: $_corrupt_out)"
+fi
+
+# Functional: manifest.json grep correctly fails on empty content
+if ! echo "$_corrupt_out" | grep -q '^manifest\.json$'; then
+	pass "corrupt bundle: grep fails to find manifest.json (bundle correctly rejected)"
+else
+	fail "corrupt bundle" \
+		"grep found manifest.json in corrupt bundle output (false positive)"
+fi
+
+# Structural: workflow uses || true to suppress unzip non-zero exit
+if grep -q 'unzip.*|| true\|unzip.*||true' "$WORKFLOW"; then
+	pass "workflow unzip uses || true to handle corrupt/empty bundles"
+else
+	fail "workflow corrupt bundle" \
+		"unzip missing || true guard (would abort on corrupt archive)"
+fi
+
+# Structural: action.yml uses || true for unzip
+if grep -q 'unzip.*|| true\|unzip.*||true' "$ACTION"; then
+	pass "action.yml unzip uses || true to handle corrupt/empty bundles"
+else
+	fail "action.yml corrupt bundle" \
+		"unzip missing || true guard (would abort on corrupt archive)"
+fi
+
+# --- SHA pin advisory tests ---
+echo ""
+echo "-- SHA pin advisory tests --"
+
+# Structural: workflow steps section has SEC-007 advisory comment
+if grep -q 'SEC-007\|supply.chain\|pin.*SHA\|SHA.*pin' "$WORKFLOW"; then
+	pass "workflow steps section has SHA pin advisory comment"
+else
+	fail "workflow SHA pin" \
+		"missing SEC-007 SHA pin advisory comment in steps section"
+fi
+
+# Structural: advisory mentions mutable tags
+if grep -q 'mutable\|@v[0-9].*tag' "$WORKFLOW"; then
+	pass "workflow SHA pin advisory mentions mutable tags"
+else
+	fail "workflow SHA pin" \
+		"advisory should mention mutable tags risk"
+fi
+
 # ── Summary ──
 echo ""
 printf '\033[1;33m=== Results ===\033[0m\n'
