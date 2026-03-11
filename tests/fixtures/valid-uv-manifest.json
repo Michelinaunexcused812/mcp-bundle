@@ -1,0 +1,28 @@
+{
+  "manifest_version": "0.4",
+  "name": "test-uv-server",
+  "display_name": "Test UV Server",
+  "version": "1.0.0",
+  "description": "A test UV runtime MCP server",
+  "author": {
+    "name": "Test Author"
+  },
+  "server": {
+    "type": "uv",
+    "entry_point": "src/server.py"
+  },
+  "tools": [
+    {
+      "name": "hello",
+      "description": "Say hello"
+    }
+  ],
+  "compatibility": {
+    "platforms": ["darwin", "linux", "win32"],
+    "runtimes": {
+      "python": ">=3.10"
+    }
+  },
+  "keywords": ["test", "uv"],
+  "license": "MIT"
+}

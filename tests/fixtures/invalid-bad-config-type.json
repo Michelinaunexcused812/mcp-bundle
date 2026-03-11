@@ -1,0 +1,20 @@
+{
+  "manifest_version": "0.3",
+  "name": "bad-config-type-server",
+  "version": "1.0.0",
+  "description": "Server with invalid config type",
+  "author": {
+    "name": "Test"
+  },
+  "server": {
+    "type": "node",
+    "entry_point": "server/index.js"
+  },
+  "user_config": {
+    "setting": {
+      "type": "integer",
+      "title": "A Setting",
+      "description": "Invalid type"
+    }
+  }
+}

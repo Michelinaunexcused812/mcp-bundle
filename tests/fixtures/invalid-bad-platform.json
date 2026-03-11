@@ -1,0 +1,16 @@
+{
+  "manifest_version": "0.3",
+  "name": "bad-platform-server",
+  "version": "1.0.0",
+  "description": "Server with invalid platform",
+  "author": {
+    "name": "Test"
+  },
+  "server": {
+    "type": "node",
+    "entry_point": "server/index.js"
+  },
+  "compatibility": {
+    "platforms": ["darwin", "windows", "android"]
+  }
+}

@@ -1,0 +1,13 @@
+{
+  "manifest_version": "0.3",
+  "name": "bad-type-server",
+  "version": "1.0.0",
+  "description": "Server with invalid type",
+  "author": {
+    "name": "Test"
+  },
+  "server": {
+    "type": "ruby",
+    "entry_point": "server/main.rb"
+  }
+}

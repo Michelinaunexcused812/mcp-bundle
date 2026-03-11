@@ -1,0 +1,13 @@
+{
+  "manifest_version": "0.3",
+  "name": "uv-wrong-version",
+  "version": "1.0.0",
+  "description": "UV server with wrong manifest version",
+  "author": {
+    "name": "Test"
+  },
+  "server": {
+    "type": "uv",
+    "entry_point": "src/server.py"
+  }
+}

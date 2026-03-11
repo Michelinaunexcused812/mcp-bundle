@@ -1,0 +1,23 @@
+{
+  "manifest_version": "0.3",
+  "name": "dup-tools-server",
+  "version": "1.0.0",
+  "description": "Server with duplicate tool names",
+  "author": {
+    "name": "Test"
+  },
+  "server": {
+    "type": "node",
+    "entry_point": "server/index.js"
+  },
+  "tools": [
+    {
+      "name": "get_data",
+      "description": "Get data"
+    },
+    {
+      "name": "get_data",
+      "description": "Get data again"
+    }
+  ]
+}

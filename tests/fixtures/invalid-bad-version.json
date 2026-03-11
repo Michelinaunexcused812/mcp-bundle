@@ -1,0 +1,13 @@
+{
+  "manifest_version": "0.3",
+  "name": "bad-version-server",
+  "version": "not-a-semver",
+  "description": "Server with invalid version",
+  "author": {
+    "name": "Test"
+  },
+  "server": {
+    "type": "node",
+    "entry_point": "server/index.js"
+  }
+}
