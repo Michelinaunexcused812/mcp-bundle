@@ -61,6 +61,12 @@ on:  # yamllint disable-line rule:truthy
         required: false
         type: string
         default: latest
+      runs-on:
+        description: >-
+          Runner label for the packaging job
+        required: false
+        type: string
+        default: ubuntu-latest
     outputs:
       bundle-path:
         description: Path to the generated bundle file
@@ -75,7 +81,7 @@ on:  # yamllint disable-line rule:truthy
 jobs:
   package:
     name: Package MCPB Bundle
-    runs-on: ubuntu-latest
+    runs-on: ${{ inputs.runs-on }}
     outputs:
       bundle-path: ${{ steps.pack.outputs.bundle-path }}
       bundle-sha256: ${{ steps.checksum.outputs.sha256 }}
@@ -236,12 +242,14 @@ jobs:
             local pattern dest
             pattern=$(echo "$1" | xargs)
             dest="$2"
-            eval "for f in $pattern; do
-              if [ -f \"\$f\" ]; then
-                mkdir -p \"$dest/\$(dirname \"\$f\")\"
-                cp \"\$f\" \"$dest/\$f\"
+            local files
+            files=$(compgen -G "$pattern" 2>/dev/null || true)
+            for f in $files; do
+              if [ -f "$f" ]; then
+                mkdir -p "$dest/$(dirname "$f")"
+                cp "$f" "$dest/$f"
               fi
-            done"
+            done
           }
 
           IFS=',' read -ra SRCS <<< "$SOURCE_FILES"
@@ -270,12 +278,36 @@ jobs:
             cp -r node_modules "$STAGING/"
           fi
 
+          # Auto-include .mcpbignore if present
+          if [ -f ".mcpbignore" ]; then
+            cp ".mcpbignore" "$STAGING/"
+          fi
+
           ICON=$(jq -r '.icon // empty' "$MANIFEST")
           if [ -n "$ICON" ] && [ -f "$ICON" ]; then
             cp "$ICON" "$STAGING/"
           fi
 
           echo "Files staged for bundling:"
+          find "$STAGING" -type f | head -50
+
+      - name: Apply .mcpbignore exclusions
+        if: hashFiles('.mcpbignore') != ''
+        env:
+          STAGING: ${{ steps.collect.outputs.staging-dir }}
+        run: |
+          if [ ! -f ".mcpbignore" ]; then exit 0; fi
+          while IFS= read -r pattern || [ -n "$pattern" ]; do
+            pattern=$(echo "$pattern" | sed 's/^[[:space:]]*//' | sed 's/[[:space:]]*$//')
+            [ -z "$pattern" ] && continue
+            [[ "$pattern" == \#* ]] && continue
+            if [[ "$pattern" == */ ]]; then
+              find "$STAGING" -type d -name "${pattern%/}" -exec rm -rf {} + 2>/dev/null || true
+            else
+              find "$STAGING" -name "$pattern" -exec rm -rf {} + 2>/dev/null || true
+            fi
+          done < ".mcpbignore"
+          echo "Files after .mcpbignore filtering:"
           find "$STAGING" -type f | head -50
 
       - name: Package bundle
@@ -297,9 +329,9 @@ jobs:
           cd "$STAGING"
           if command -v mcpb &>/dev/null; then
             mcpb pack --output "$GITHUB_WORKSPACE/$BUNDLE_FILE" || \
-              zip -r "$GITHUB_WORKSPACE/$BUNDLE_FILE" . -x '*.git*'
+              zip -ry "$GITHUB_WORKSPACE/$BUNDLE_FILE" . -x '*.git*'
           else
-            zip -r "$GITHUB_WORKSPACE/$BUNDLE_FILE" . -x '*.git*'
+            zip -ry "$GITHUB_WORKSPACE/$BUNDLE_FILE" . -x '*.git*'
           fi
 
           cd "$GITHUB_WORKSPACE"
