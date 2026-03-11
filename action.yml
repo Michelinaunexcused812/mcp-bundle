@@ -2,7 +2,7 @@
 ---
 name: MCP Bundle Packager
 description: Package MCP server projects into MCPB (MCP Bundle) archives with manifest validation, checksums, and release asset support.
-author: zircote
+author: Robert Allen <zircote@gmail.com>
 
 branding:
   icon: package
@@ -68,6 +68,15 @@ outputs:
 runs:
   using: composite
   steps:
+    - name: Detect server type
+      id: detect
+      shell: bash
+      env:
+        MANIFEST: ${{ inputs.manifest-path }}
+      run: |
+        SERVER_TYPE=$(jq -r '.server.type' "$MANIFEST")
+        echo "server-type=$SERVER_TYPE" >> "$GITHUB_OUTPUT"
+
     - name: Validate manifest.json
       id: validate
       shell: bash
@@ -124,7 +133,7 @@ runs:
 
         ENTRY=$(jq -r '.server.entry_point' "$MANIFEST")
         if [ -n "$ENTRY" ] && [ ! -f "$ENTRY" ]; then
-          ERRORS+="Entry point file not found: ${ENTRY}\n"
+          echo "::warning::Entry point not found: ${ENTRY} (expected if build produces it)"
         fi
 
         CONFIG_TYPES=$(jq -r '.user_config // {} | to_entries[] | .value.type // empty' "$MANIFEST" 2>/dev/null || true)
@@ -158,6 +167,7 @@ runs:
         echo "valid=true" >> "$GITHUB_OUTPUT"
 
     - name: Install mcpb CLI
+      if: steps.detect.outputs.server-type == 'node'
       shell: bash
       env:
         MCPB_VER: ${{ inputs.mcpb-version }}
@@ -184,11 +194,25 @@ runs:
         VERSION=$(jq -r '.version' "$MANIFEST")
         BUNDLE_FILE="${BNAME}-${VERSION}.mcpb"
 
+        EXCLUDES="-x '*.git*' -x 'node_modules/*'"
+        if [ -f ".mcpbignore" ]; then
+          while IFS= read -r pattern || [ -n "$pattern" ]; do
+            pattern=$(echo "$pattern" | sed 's/^[[:space:]]*//' | sed 's/[[:space:]]*$//')
+            [ -z "$pattern" ] && continue
+            [[ "$pattern" == \#* ]] && continue
+            if [[ "$pattern" == */ ]]; then
+              EXCLUDES+=" -x '${pattern}*'"
+            else
+              EXCLUDES+=" -x '$pattern'"
+            fi
+          done < ".mcpbignore"
+        fi
+
         if command -v mcpb &>/dev/null; then
           mcpb pack --output "$BUNDLE_FILE" || \
-            zip -r "$BUNDLE_FILE" . -x '*.git*' -x 'node_modules/*'
+            eval "zip -ry \"$BUNDLE_FILE\" . $EXCLUDES"
         else
-          zip -r "$BUNDLE_FILE" . -x '*.git*' -x 'node_modules/*'
+          eval "zip -ry \"$BUNDLE_FILE\" . $EXCLUDES"
         fi
 
         echo "bundle-path=$BUNDLE_FILE" >> "$GITHUB_OUTPUT"

@@ -369,7 +369,7 @@ if [ -f "$WORKFLOW" ]; then
 		additional-artifacts node-version \
 		build-command test-command bundle-name \
 		upload-artifact create-release-asset \
-		mcpb-version; do
+		mcpb-version runs-on; do
 		if grep -q "      ${input}:" "$WORKFLOW"; then
 			pass "workflow has input: $input"
 		else
@@ -485,6 +485,65 @@ for example in \
 		fail "example" "missing: $example"
 	fi
 done
+
+# --- Review remediation tests ---
+echo ""
+echo "-- Review remediation tests --"
+
+# workflow runs-on defaults to ubuntu-latest
+if grep -q "default: ubuntu-latest" "$WORKFLOW"; then
+	pass "workflow runs-on defaults to ubuntu-latest"
+else
+	fail "workflow runs-on" \
+		"missing default ubuntu-latest"
+fi
+
+# workflow has .mcpbignore step
+if grep -q "Apply .mcpbignore exclusions" "$WORKFLOW"; then
+	pass "workflow has .mcpbignore step"
+else
+	fail "workflow" "missing .mcpbignore step"
+fi
+
+# action.yml reads .mcpbignore
+if grep -q "mcpbignore" "$ACTION"; then
+	pass "action.yml reads .mcpbignore"
+else
+	fail "action.yml" "missing .mcpbignore support"
+fi
+
+# action.yml entry_point is warning not error
+if grep -q "::warning::Entry point" "$ACTION"; then
+	pass "action.yml entry_point is warning"
+else
+	fail "action.yml" \
+		"entry_point should be warning"
+fi
+
+# workflow entry_point is still error
+if grep -q 'Entry point file not found' "$WORKFLOW"; then
+	pass "workflow entry_point is still error"
+else
+	fail "workflow" \
+		"entry_point should remain error"
+fi
+
+# ci.yml exists
+CI_WORKFLOW="$SCRIPT_DIR/../.github/workflows/ci.yml"
+if [ -f "$CI_WORKFLOW" ]; then
+	pass "ci.yml exists"
+else
+	fail "ci.yml" "file not found"
+fi
+
+# ci.yml runs test suite
+if [ -f "$CI_WORKFLOW" ] &&
+	grep -q "test-manifest-validation" "$CI_WORKFLOW"; then
+	pass "ci.yml runs test suite"
+else
+	fail "ci.yml" \
+		"missing test-manifest-validation ref"
+fi
 
 # ── Summary ──
 echo ""

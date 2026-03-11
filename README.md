@@ -112,6 +112,7 @@ Run `/mcpb` in a project directory containing an MCP server. The skill will:
 | `upload-artifact` | boolean | no | `true` | Upload bundle as GitHub Actions artifact |
 | `create-release-asset` | boolean | no | `false` | Attach bundle to GitHub Release (tag pushes only) |
 | `mcpb-version` | string | no | `latest` | Version of mcpb toolchain |
+| `runs-on` | string | no | `ubuntu-latest` | Runner label for the packaging job |
 
 ### Outputs
 
@@ -130,7 +131,7 @@ Both the reusable workflow and composite action perform these 10 validation chec
 3. `version` is valid semver
 4. UV server type requires `manifest_version: "0.4"`
 5. `compatibility.platforms` values are valid (`darwin`, `win32`, `linux`)
-6. `server.entry_point` file exists
+6. `server.entry_point` file exists (warning in composite action, error in reusable workflow)
 7. `user_config` field types are valid (`string`, `number`, `boolean`, `directory`, `file`)
 8. All `${user_config.*}` variable references have matching `user_config` entries
 9. No duplicate tool names in `tools` array
@@ -170,12 +171,31 @@ Run the test suite:
 ./tests/test-manifest-validation.sh
 ```
 
-The test suite (58 tests) covers:
+The test suite (73 tests) covers:
 - Manifest validation: required fields, semver, server types, UV version constraint, platforms, config types, variable substitution refs, duplicate tools
 - JSON structure validation for all fixtures
 - Workflow and action YAML structure verification
 - Skill file structure and content completeness
 - Example workflow presence and references
+
+## `.mcpbignore`
+
+Create a `.mcpbignore` file in your repository root to exclude files from the bundle. Format is similar to `.gitignore`:
+
+```text
+# Comments start with #
+*.log
+*.tmp
+tests/
+docs/
+__pycache__/
+```
+
+- Blank lines and lines starting with `#` are ignored
+- Patterns ending with `/` match directories
+- All other patterns match by filename
+
+The reusable workflow applies exclusions by pruning from the staging directory before packaging. The composite action passes them as `-x` arguments to `zip`.
 
 ## Security Considerations
 
