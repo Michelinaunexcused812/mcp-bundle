@@ -98,7 +98,9 @@ Extract as much as possible from the project automatically:
 
 ### Step 3: Generate manifest.json
 
-Create a valid `manifest.json` at the project root following this exact schema:
+Create a valid `manifest.json` at the project root. Use the correct schema based on detected server type:
+
+**For node / python / binary** (`manifest_version: "0.3"`):
 
 ```json
 {
@@ -113,7 +115,7 @@ Create a valid `manifest.json` at the project root following this exact schema:
     "url": "<optional url>"
   },
   "server": {
-    "type": "<node|python|binary|uv>",
+    "type": "<node|python|binary>",
     "entry_point": "<relative path to main file>",
     "mcp_config": {
       "command": "<node|python|binary-path>",
@@ -137,16 +139,50 @@ Create a valid `manifest.json` at the project root following this exact schema:
 }
 ```
 
+**For uv** (`manifest_version: "0.4"` — omit `mcp_config`, UV runtime handles execution):
+
+```json
+{
+  "manifest_version": "0.4",
+  "name": "<machine-readable-name>",
+  "display_name": "<Human Friendly Name>",
+  "version": "<semver>",
+  "description": "<brief description>",
+  "author": {
+    "name": "<author name>",
+    "email": "<optional email>",
+    "url": "<optional url>"
+  },
+  "server": {
+    "type": "uv",
+    "entry_point": "<relative path to main file>"
+  },
+  "tools": [
+    {
+      "name": "<tool_name>",
+      "description": "<tool description>"
+    }
+  ],
+  "keywords": [],
+  "license": "MIT",
+  "user_config": {},
+  "compatibility": {
+    "platforms": ["darwin", "win32", "linux"],
+    "runtimes": {}
+  }
+}
+```
+
 **Schema rules:**
 - `manifest_version`: Use `"0.3"` for node/python/binary, `"0.4"` for uv
-- `name`: Lowercase, hyphenated, no spaces (machine-readable)
+- `name`: Lowercase, hyphenated, no spaces (machine-readable). Sanitize inferred names: lowercase, replace spaces and underscores with hyphens, strip non-alphanumeric characters except hyphens
 - `version`: Must be valid semver
 - `server.type`: One of `"node"`, `"python"`, `"binary"`, `"uv"`
 - `server.entry_point`: Relative path from bundle root to the server main file
-- For UV type: omit `mcp_config` (the UV runtime handles execution)
+- For UV type: omit `mcp_config` entirely (the UV runtime handles execution)
 - `args` should use `${__dirname}` variable for the entry point path
 - Sensitive config values use `${user_config.KEY_NAME}` variable substitution in `env`
-- `tools` array: list every tool the server exposes with name and description
+- `tools` array: list every tool the server exposes; each entry must have both `name` and `description`
 - `compatibility.runtimes`: e.g., `{"node": ">=18.0.0"}` or `{"python": ">=3.10"}`
 
 ### Step 4: Create Bundle Directory Structure
@@ -248,7 +284,7 @@ Run these validation checks on the generated `manifest.json`:
 
 ### Step 6: Wire In CI/CD Workflow
 
-Generate a caller workflow at `.github/workflows/mcp-bundle.yml` that invokes the reusable workflow:
+Generate a caller workflow at `.github/workflows/mcpb-package.yml` that invokes the reusable workflow. Do NOT use the filename `mcp-bundle.yml` — that name is reserved for the reusable workflow itself in the `zircote/mcp-bundle` repo and would collide if users fork or vendor that file:
 
 ```yaml
 name: Package MCPB Bundle
@@ -290,7 +326,7 @@ After completing all steps, print a summary:
 ### Files Generated:
 - ✓ manifest.json — Bundle manifest (spec v0.3)
 - ✓ .mcpbignore — Bundle exclusion rules
-- ✓ .github/workflows/mcp-bundle.yml — CI/CD caller workflow
+- ✓ .github/workflows/mcpb-package.yml — CI/CD caller workflow
 
 ### Manifest Details:
 - Name: <name>

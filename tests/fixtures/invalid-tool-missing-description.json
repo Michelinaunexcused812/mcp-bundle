@@ -1,0 +1,33 @@
+{
+  "manifest_version": "0.3",
+  "name": "test-mcp-server",
+  "display_name": "Test MCP Server",
+  "version": "1.0.0",
+  "description": "A test MCP server",
+  "author": {
+    "name": "Test Author"
+  },
+  "server": {
+    "type": "node",
+    "entry_point": "server/index.js",
+    "mcp_config": {
+      "command": "node",
+      "args": ["${__dirname}/server/index.js"],
+      "env": {}
+    }
+  },
+  "tools": [
+    {
+      "name": "get_data"
+    }
+  ],
+  "keywords": [],
+  "license": "MIT",
+  "user_config": {},
+  "compatibility": {
+    "platforms": ["darwin", "win32", "linux"],
+    "runtimes": {
+      "node": ">=18.0.0"
+    }
+  }
+}

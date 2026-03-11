@@ -194,25 +194,30 @@ runs:
         VERSION=$(jq -r '.version' "$MANIFEST")
         BUNDLE_FILE="${BNAME}-${VERSION}.mcpb"
 
-        EXCLUDES="-x '*.git*' -x 'node_modules/*'"
+        EXCLUDES=("*.git*" "node_modules/*")
         if [ -f ".mcpbignore" ]; then
           while IFS= read -r pattern || [ -n "$pattern" ]; do
             pattern=$(echo "$pattern" | sed 's/^[[:space:]]*//' | sed 's/[[:space:]]*$//')
             [ -z "$pattern" ] && continue
             [[ "$pattern" == \#* ]] && continue
             if [[ "$pattern" == */ ]]; then
-              EXCLUDES+=" -x '${pattern}*'"
+              EXCLUDES+=("${pattern}*")
             else
-              EXCLUDES+=" -x '$pattern'"
+              EXCLUDES+=("$pattern")
             fi
           done < ".mcpbignore"
         fi
 
+        EXCLUDE_ARGS=()
+        for pat in "${EXCLUDES[@]}"; do
+          EXCLUDE_ARGS+=(-x "$pat")
+        done
+
         if command -v mcpb &>/dev/null; then
           mcpb pack --output "$BUNDLE_FILE" || \
-            eval "zip -ry \"$BUNDLE_FILE\" . $EXCLUDES"
+            zip -ry "$BUNDLE_FILE" . "${EXCLUDE_ARGS[@]}"
         else
-          eval "zip -ry \"$BUNDLE_FILE\" . $EXCLUDES"
+          zip -ry "$BUNDLE_FILE" . "${EXCLUDE_ARGS[@]}"
         fi
 
         echo "bundle-path=$BUNDLE_FILE" >> "$GITHUB_OUTPUT"
@@ -223,7 +228,11 @@ runs:
       env:
         BUNDLE_FILE: ${{ steps.pack.outputs.bundle-path }}
       run: |
-        SHA256=$(sha256sum "$BUNDLE_FILE" | awk '{print $1}')
+        if command -v sha256sum &>/dev/null; then
+          SHA256=$(sha256sum "$BUNDLE_FILE" | awk '{print $1}')
+        else
+          SHA256=$(shasum -a 256 "$BUNDLE_FILE" | awk '{print $1}')
+        fi
         echo "sha256=$SHA256" >> "$GITHUB_OUTPUT"
         echo "$SHA256  $BUNDLE_FILE" > "${BUNDLE_FILE}.sha256"
 

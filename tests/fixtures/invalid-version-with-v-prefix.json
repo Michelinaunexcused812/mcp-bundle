@@ -1,0 +1,13 @@
+{
+  "manifest_version": "0.3",
+  "name": "v-prefix-server",
+  "version": "v1.0.0",
+  "description": "Server with v-prefixed version (invalid semver)",
+  "author": {
+    "name": "Test Author"
+  },
+  "server": {
+    "type": "node",
+    "entry_point": "server/index.js"
+  }
+}

@@ -1,0 +1,45 @@
+{
+  "manifest_version": "0.3",
+  "name": "test-python-server",
+  "display_name": "Test Python MCP Server",
+  "version": "2.1.0",
+  "description": "A test Python MCP server for validation",
+  "author": {
+    "name": "Test Author",
+    "email": "test@example.com"
+  },
+  "server": {
+    "type": "python",
+    "entry_point": "server/main.py",
+    "mcp_config": {
+      "command": "python",
+      "args": ["${__dirname}/server/main.py"],
+      "env": {
+        "DB_URL": "${user_config.database_url}"
+      }
+    }
+  },
+  "tools": [
+    {
+      "name": "query",
+      "description": "Run a database query"
+    }
+  ],
+  "keywords": ["python", "database", "mcp"],
+  "license": "MIT",
+  "user_config": {
+    "database_url": {
+      "type": "string",
+      "title": "Database URL",
+      "description": "PostgreSQL connection string",
+      "sensitive": true,
+      "required": true
+    }
+  },
+  "compatibility": {
+    "platforms": ["darwin", "linux", "win32"],
+    "runtimes": {
+      "python": ">=3.10"
+    }
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "manifest_version": "0.3",
+  "name": "no-tools-server",
+  "display_name": "No Tools Server",
+  "version": "1.0.0",
+  "description": "Server with no tools array",
+  "author": {
+    "name": "Test Author"
+  },
+  "server": {
+    "type": "node",
+    "entry_point": "server/index.js"
+  }
+}

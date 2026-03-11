@@ -1,0 +1,13 @@
+{
+  "manifest_version": "0.3",
+  "name": "",
+  "version": "1.0.0",
+  "description": "Server with empty name string",
+  "author": {
+    "name": "Test Author"
+  },
+  "server": {
+    "type": "node",
+    "entry_point": "server/index.js"
+  }
+}

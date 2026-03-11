@@ -1,0 +1,14 @@
+{
+  "manifest_version": "0.3",
+  "name": "buildmeta-server",
+  "display_name": "Build Meta Server",
+  "version": "1.0.0+build.42",
+  "description": "Server with a build metadata semver version",
+  "author": {
+    "name": "Test Author"
+  },
+  "server": {
+    "type": "node",
+    "entry_point": "server/index.js"
+  }
+}

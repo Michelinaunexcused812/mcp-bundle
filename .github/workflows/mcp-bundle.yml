@@ -110,17 +110,24 @@ jobs:
         if: steps.detect.outputs.server-type == 'node'
         run: npm ci --ignore-scripts || npm install --ignore-scripts
 
+      - name: Install Python dependencies
+        if: steps.detect.outputs.server-type == 'python'
+        run: |
+          if [ -f "requirements.txt" ]; then
+            pip install --quiet -r requirements.txt
+          fi
+
       - name: Run build command
         if: inputs.build-command != ''
         env:
           BUILD_CMD: ${{ inputs.build-command }}
-        run: eval "$BUILD_CMD"
+        run: bash -c "$BUILD_CMD"
 
       - name: Run test command
         if: inputs.test-command != ''
         env:
           TEST_CMD: ${{ inputs.test-command }}
-        run: eval "$TEST_CMD"
+        run: bash -c "$TEST_CMD"
 
       - name: Validate manifest.json
         id: validate
@@ -233,6 +240,7 @@ jobs:
           MANIFEST: ${{ inputs.manifest-path }}
           SERVER_TYPE: ${{ steps.detect.outputs.server-type }}
         run: |
+          shopt -s globstar
           STAGING=$(mktemp -d)
           echo "staging-dir=$STAGING" >> "$GITHUB_OUTPUT"
 
@@ -242,14 +250,18 @@ jobs:
             local pattern dest
             pattern=$(echo "$1" | xargs)
             dest="$2"
-            local files
+            local files matched=0
             files=$(compgen -G "$pattern" 2>/dev/null || true)
             for f in $files; do
               if [ -f "$f" ]; then
                 mkdir -p "$dest/$(dirname "$f")"
                 cp "$f" "$dest/$f"
+                matched=$((matched + 1))
               fi
             done
+            if [ "$matched" -eq 0 ]; then
+              echo "::warning::No files matched pattern: ${pattern}"
+            fi
           }
 
           IFS=',' read -ra SRCS <<< "$SOURCE_FILES"
@@ -383,4 +395,4 @@ jobs:
         if: always()
         env:
           STAGING: ${{ steps.collect.outputs.staging-dir }}
-        run: rm -rf "$STAGING"
+        run: '[ -n "$STAGING" ] && rm -rf "$STAGING"'

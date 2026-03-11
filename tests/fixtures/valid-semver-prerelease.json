@@ -1,0 +1,14 @@
+{
+  "manifest_version": "0.3",
+  "name": "prerelease-server",
+  "display_name": "Pre-release Server",
+  "version": "1.0.0-beta.1",
+  "description": "Server with a pre-release semver version",
+  "author": {
+    "name": "Test Author"
+  },
+  "server": {
+    "type": "node",
+    "entry_point": "server/index.js"
+  }
+}

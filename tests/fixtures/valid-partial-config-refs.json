@@ -1,0 +1,35 @@
+{
+  "manifest_version": "0.3",
+  "name": "partial-config-server",
+  "display_name": "Partial Config Server",
+  "version": "1.0.0",
+  "description": "Server with args config ref and env config ref both defined",
+  "author": {
+    "name": "Test Author"
+  },
+  "server": {
+    "type": "node",
+    "entry_point": "server/index.js",
+    "mcp_config": {
+      "command": "node",
+      "args": ["${__dirname}/server/index.js", "--key=${user_config.api_key}"],
+      "env": {
+        "DB_PASS": "${user_config.db_password}"
+      }
+    }
+  },
+  "user_config": {
+    "api_key": {
+      "type": "string",
+      "title": "API Key",
+      "description": "API key",
+      "sensitive": true
+    },
+    "db_password": {
+      "type": "string",
+      "title": "Database Password",
+      "description": "DB connection password",
+      "sensitive": true
+    }
+  }
+}

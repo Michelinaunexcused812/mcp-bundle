@@ -1,0 +1,15 @@
+{
+  "manifest_version": "0.3",
+  "name": "empty-tools-server",
+  "display_name": "Empty Tools Server",
+  "version": "1.0.0",
+  "description": "Server with an empty tools array",
+  "author": {
+    "name": "Test Author"
+  },
+  "server": {
+    "type": "node",
+    "entry_point": "server/index.js"
+  },
+  "tools": []
+}

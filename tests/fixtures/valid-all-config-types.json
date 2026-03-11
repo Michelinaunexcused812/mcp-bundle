@@ -1,0 +1,53 @@
+{
+  "manifest_version": "0.3",
+  "name": "all-config-types-server",
+  "display_name": "All Config Types Server",
+  "version": "1.0.0",
+  "description": "Server using all valid user_config types",
+  "author": {
+    "name": "Test Author"
+  },
+  "server": {
+    "type": "node",
+    "entry_point": "server/index.js",
+    "mcp_config": {
+      "command": "node",
+      "args": ["${__dirname}/server/index.js"],
+      "env": {
+        "WORKSPACE": "${user_config.workspace_dir}",
+        "CERT": "${user_config.cert_file}",
+        "PORT": "${user_config.port}",
+        "DEBUG": "${user_config.debug_mode}",
+        "TOKEN": "${user_config.api_token}"
+      }
+    }
+  },
+  "user_config": {
+    "workspace_dir": {
+      "type": "directory",
+      "title": "Workspace Directory",
+      "description": "Path to the workspace"
+    },
+    "cert_file": {
+      "type": "file",
+      "title": "Certificate File",
+      "description": "Path to the TLS certificate"
+    },
+    "port": {
+      "type": "number",
+      "title": "Port",
+      "description": "Server port number"
+    },
+    "debug_mode": {
+      "type": "boolean",
+      "title": "Debug Mode",
+      "description": "Enable debug logging"
+    },
+    "api_token": {
+      "type": "string",
+      "title": "API Token",
+      "description": "Authentication token",
+      "sensitive": true
+    }
+  }
+}

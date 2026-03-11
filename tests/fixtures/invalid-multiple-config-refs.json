@@ -1,0 +1,24 @@
+{
+  "manifest_version": "0.3",
+  "name": "multi-ref-server",
+  "version": "1.0.0",
+  "description": "Server with multiple undefined config refs",
+  "author": {
+    "name": "Test Author"
+  },
+  "server": {
+    "type": "node",
+    "entry_point": "server/index.js",
+    "mcp_config": {
+      "command": "node",
+      "args": [
+        "${__dirname}/server/index.js",
+        "--key=${user_config.missing_key}"
+      ],
+      "env": {
+        "SECRET": "${user_config.missing_secret}",
+        "DB": "${user_config.missing_db}"
+      }
+    }
+  }
+}

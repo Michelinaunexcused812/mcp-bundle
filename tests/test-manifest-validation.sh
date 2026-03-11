@@ -122,6 +122,16 @@ validate_manifest() {
 		fi
 	done
 
+	# Check tool entries have both name and description
+	tool_missing=$(jq -r '
+    .tools[]? |
+    select((.name // "") == "" or (.description // "") == "") |
+    .name // "(unnamed)"
+  ' "$manifest" 2>/dev/null || true)
+	if [ -n "$tool_missing" ]; then
+		errors+="Tool missing name or description: ${tool_missing}\n"
+	fi
+
 	# Check duplicate tool names
 	dups=$(jq -r '
     [.tools[]?.name] |
@@ -325,6 +335,25 @@ else
 	else
 		fail "invalid-bad-config-type.json" \
 			"wrong error type"
+	fi
+fi
+
+# --- Tool missing description ---
+if validate_manifest \
+	"$FIXTURES/invalid-tool-missing-description.json" \
+	>/dev/null 2>&1; then
+	fail "invalid-tool-missing-description.json" \
+		"should fail but passed"
+else
+	output=$(validate_manifest \
+		"$FIXTURES/invalid-tool-missing-description.json" \
+		2>&1 || true)
+	if echo "$output" |
+		grep -q "Tool missing name or description"; then
+		pass "tool missing description detected correctly"
+	else
+		fail "invalid-tool-missing-description.json" \
+			"wrong error type: $output"
 	fi
 fi
 
@@ -571,6 +600,328 @@ if grep -q 'LICENSE.*STAGING' "$WORKFLOW"; then
 else
 	fail "workflow" \
 		"missing LICENSE auto-include"
+fi
+
+# --- New valid fixture tests ---
+echo ""
+echo "-- Extended valid fixture tests --"
+
+# Python manifest
+if validate_manifest \
+	"$FIXTURES/valid-python-manifest.json" \
+	>/dev/null 2>&1; then
+	pass "valid-python-manifest.json passes validation"
+else
+	fail "valid-python-manifest.json" \
+		"should pass but failed"
+fi
+
+# Pre-release semver (1.0.0-beta.1)
+if validate_manifest \
+	"$FIXTURES/valid-semver-prerelease.json" \
+	>/dev/null 2>&1; then
+	pass "pre-release semver 1.0.0-beta.1 passes validation"
+else
+	fail "valid-semver-prerelease.json" \
+		"pre-release semver should pass but failed"
+fi
+
+# Build-metadata semver (1.0.0+build.42)
+if validate_manifest \
+	"$FIXTURES/valid-semver-buildmeta.json" \
+	>/dev/null 2>&1; then
+	pass "build-metadata semver 1.0.0+build.42 passes validation"
+else
+	fail "valid-semver-buildmeta.json" \
+		"build-metadata semver should pass but failed"
+fi
+
+# No tools key at all
+if validate_manifest \
+	"$FIXTURES/valid-no-tools.json" \
+	>/dev/null 2>&1; then
+	pass "manifest with no tools key passes validation"
+else
+	fail "valid-no-tools.json" \
+		"no tools key should pass but failed"
+fi
+
+# Empty tools array
+if validate_manifest \
+	"$FIXTURES/valid-empty-tools.json" \
+	>/dev/null 2>&1; then
+	pass "manifest with empty tools array passes validation"
+else
+	fail "valid-empty-tools.json" \
+		"empty tools array should pass but failed"
+fi
+
+# All valid user_config types (string, number, boolean, directory, file)
+if validate_manifest \
+	"$FIXTURES/valid-all-config-types.json" \
+	>/dev/null 2>&1; then
+	pass "all valid user_config types pass validation"
+else
+	fail "valid-all-config-types.json" \
+		"all config types should pass but failed"
+fi
+
+# Both args and env config refs defined
+if validate_manifest \
+	"$FIXTURES/valid-partial-config-refs.json" \
+	>/dev/null 2>&1; then
+	pass "config refs in both args and env pass validation"
+else
+	fail "valid-partial-config-refs.json" \
+		"defined config refs should pass but failed"
+fi
+
+# --- Extended invalid fixture tests ---
+echo ""
+echo "-- Extended invalid fixture tests --"
+
+# v-prefixed version (v1.0.0)
+if validate_manifest \
+	"$FIXTURES/invalid-version-with-v-prefix.json" \
+	>/dev/null 2>&1; then
+	fail "invalid-version-with-v-prefix.json" \
+		"v-prefix version should fail but passed"
+else
+	output=$(validate_manifest \
+		"$FIXTURES/invalid-version-with-v-prefix.json" \
+		2>&1 || true)
+	if echo "$output" | grep -q "Invalid semver"; then
+		pass "v-prefixed version rejected correctly"
+	else
+		fail "invalid-version-with-v-prefix.json" \
+			"wrong error type: $output"
+	fi
+fi
+
+# Empty string name (not null — jq returns empty for empty string)
+if validate_manifest \
+	"$FIXTURES/invalid-empty-name.json" \
+	>/dev/null 2>&1; then
+	fail "invalid-empty-name.json" \
+		"empty name should fail but passed"
+else
+	output=$(validate_manifest \
+		"$FIXTURES/invalid-empty-name.json" \
+		2>&1 || true)
+	if echo "$output" | grep -q "Missing:"; then
+		pass "empty name string rejected correctly"
+	else
+		fail "invalid-empty-name.json" \
+			"wrong error type: $output"
+	fi
+fi
+
+# Multiple missing required fields at once
+if validate_manifest \
+	"$FIXTURES/invalid-multiple-missing-fields.json" \
+	>/dev/null 2>&1; then
+	fail "invalid-multiple-missing-fields.json" \
+		"multiple missing fields should fail but passed"
+else
+	output=$(validate_manifest \
+		"$FIXTURES/invalid-multiple-missing-fields.json" \
+		2>&1 || true)
+	missing_count=$(echo "$output" |
+		grep -c "Missing:" || true)
+	if [ "$missing_count" -ge 3 ]; then
+		pass "multiple missing fields reported ($missing_count errors)"
+	else
+		fail "invalid-multiple-missing-fields.json" \
+			"expected >=3 Missing: errors, got $missing_count"
+	fi
+fi
+
+# Multiple undefined config refs in args and env
+if validate_manifest \
+	"$FIXTURES/invalid-multiple-config-refs.json" \
+	>/dev/null 2>&1; then
+	fail "invalid-multiple-config-refs.json" \
+		"multiple undefined refs should fail but passed"
+else
+	output=$(validate_manifest \
+		"$FIXTURES/invalid-multiple-config-refs.json" \
+		2>&1 || true)
+	ref_count=$(echo "$output" |
+		grep -c "Undefined ref:" || true)
+	if [ "$ref_count" -ge 2 ]; then
+		pass "multiple undefined config refs reported ($ref_count errors)"
+	else
+		fail "invalid-multiple-config-refs.json" \
+			"expected >=2 Undefined ref: errors, got $ref_count"
+	fi
+fi
+
+# --- Security: eval usage ---
+echo ""
+echo "-- Security audit tests --"
+
+# workflow build/test commands use bash -c (not eval)
+# shellcheck disable=SC2016
+if grep -q 'bash -c "\$BUILD_CMD"' "$WORKFLOW"; then
+	pass "workflow build-command uses bash -c (not eval)"
+else
+	fail "workflow security" \
+		"build-command should use bash -c not eval"
+fi
+# shellcheck disable=SC2016
+if grep -q 'bash -c "\$TEST_CMD"' "$WORKFLOW"; then
+	pass "workflow test-command uses bash -c (not eval)"
+else
+	fail "workflow security" \
+		"test-command should use bash -c not eval"
+fi
+
+# action.yml zip excludes use bash array (not eval + string concatenation)
+if grep -q 'EXCLUDE_ARGS\+=\|EXCLUDES=(' "$ACTION"; then
+	pass "action.yml zip excludes use bash array (no eval injection risk)"
+else
+	fail "action.yml security" \
+		"zip excludes should use bash array, not eval+string"
+fi
+
+# Workflow: GH_TOKEN is sourced from github.token (not a user input)
+# shellcheck disable=SC2016
+if grep -q 'GH_TOKEN: \${{ github.token }}' "$WORKFLOW"; then
+	pass "workflow GH_TOKEN sourced from github.token (not user input)"
+else
+	fail "workflow security" \
+		"GH_TOKEN not sourced from github.token"
+fi
+
+# action.yml: GH_TOKEN is sourced from github.token (not a user input)
+# shellcheck disable=SC2016
+if grep -q 'GH_TOKEN: \${{ github.token }}' "$ACTION"; then
+	pass "action.yml GH_TOKEN sourced from github.token (not user input)"
+else
+	fail "action.yml security" \
+		"GH_TOKEN not sourced from github.token"
+fi
+
+# .mcpbignore pattern handling does not allow absolute paths to escape staging
+if grep -q 'find.*STAGING.*-name' "$WORKFLOW"; then
+	pass "workflow .mcpbignore uses find -name (confined to staging dir)"
+else
+	fail "workflow security" \
+		".mcpbignore processing may not be confined to staging dir"
+fi
+
+# node_modules copied to staging (not skipped) for node server type
+if grep -q 'node_modules.*STAGING\|cp.*node_modules.*STAGING' "$WORKFLOW" ||
+	grep -q 'node_modules.*staging' "$WORKFLOW"; then
+	pass "workflow copies node_modules to staging for node type"
+else
+	fail "workflow capability" \
+		"node_modules not copied to staging"
+fi
+
+# --- Workflow: mcpb-version input injection safety ---
+# mcpb-version is passed as env var to shell before npm install
+if grep -q 'MCPB_VER.*mcpb-version\|mcpb-version.*MCPB_VER' "$WORKFLOW"; then
+	pass "workflow mcpb-version passed via env var (not inline)"
+else
+	fail "workflow security" \
+		"mcpb-version not isolated via env var before npm install"
+fi
+
+# --- Workflow: sha256sum availability ---
+# Workflow uses sha256sum (GNU coreutils - linux specific)
+# This is fine on ubuntu-latest but may fail on macOS
+if grep -q 'sha256sum' "$WORKFLOW"; then
+	pass "workflow uses sha256sum for checksums"
+fi
+# action.yml must have portable sha256 fallback (sha256sum || shasum -a 256)
+if grep -q 'sha256sum' "$ACTION" &&
+	grep -q 'shasum' "$ACTION"; then
+	pass "action.yml has portable sha256 fallback (sha256sum || shasum)"
+else
+	fail "action.yml capability" \
+		"action.yml missing portable sha256 fallback for macOS runners"
+fi
+
+# --- Workflow: cleanup step runs on always() ---
+if grep -q "if: always()" "$WORKFLOW"; then
+	pass "workflow has cleanup step with always() condition"
+else
+	fail "workflow" \
+		"missing cleanup step with always() condition"
+fi
+
+# --- Workflow: cleanup guards empty STAGING ---
+if grep -q '\-n.*STAGING.*rm\|STAGING.*&&.*rm' "$WORKFLOW"; then
+	pass "workflow cleanup guards empty STAGING variable"
+else
+	fail "workflow security" \
+		"rm -rf STAGING not guarded against empty value"
+fi
+
+# --- Workflow: globstar enabled for ** patterns ---
+if grep -q 'shopt -s globstar' "$WORKFLOW"; then
+	pass "workflow enables globstar for ** glob expansion"
+else
+	fail "workflow capability" \
+		"missing shopt -s globstar for ** patterns"
+fi
+
+# --- Capability: node_modules included for node type ---
+if grep -q 'SERVER_TYPE.*node\|node.*SERVER_TYPE' "$WORKFLOW" &&
+	grep -q 'node_modules' "$WORKFLOW"; then
+	pass "workflow conditionally includes node_modules for node type"
+else
+	fail "workflow capability" \
+		"node_modules not conditionally included for node type"
+fi
+
+# --- Capability: icon.png support ---
+if grep -q '\.icon\|icon.*STAGING\|ICON' "$WORKFLOW"; then
+	pass "workflow supports icon file from manifest"
+else
+	fail "workflow capability" \
+		"workflow missing icon.png support"
+fi
+
+# --- Capability: checkout step present in reusable workflow ---
+if grep -q 'actions/checkout' "$WORKFLOW"; then
+	pass "reusable workflow includes checkout step"
+else
+	fail "workflow capability" \
+		"missing checkout step"
+fi
+
+# --- Skill: security constraints documented ---
+if grep -q 'No shell injection\|shell injection' "$SKILL"; then
+	pass "skill documents shell injection constraint"
+else
+	fail "skill security" \
+		"skill missing shell injection constraint"
+fi
+
+# --- Skill: stdio transport constraint documented ---
+if grep -q 'stdio transport ONLY\|stdio.*ONLY' "$SKILL"; then
+	pass "skill documents stdio transport constraint"
+else
+	fail "skill capability" \
+		"skill missing stdio transport constraint"
+fi
+
+# --- Skill: stderr logging constraint documented ---
+if grep -q 'stderr.*logging\|logging.*stderr' "$SKILL"; then
+	pass "skill documents stderr logging constraint"
+else
+	fail "skill capability" \
+		"skill missing stderr logging constraint"
+fi
+
+# --- Skill: idempotency constraint documented ---
+if grep -q '[Ii]dempotent' "$SKILL"; then
+	pass "skill documents idempotency constraint"
+else
+	fail "skill capability" \
+		"skill missing idempotency constraint"
 fi
 
 # ── Summary ──

@@ -1,0 +1,5 @@
+{
+  "manifest_version": "0.3",
+  "name": "partially-complete-server",
+  "description": "Missing version, author, and server fields"
+}
