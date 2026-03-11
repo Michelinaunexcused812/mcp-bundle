@@ -32,12 +32,17 @@ on:  # yamllint disable-line rule:truthy
         type: string
         default: '18'
       build-command:
-        description: Custom build command to run before packaging
+        description: >-
+          Shell command to run before packaging (executed via bash -c on the
+          runner). Treat as arbitrary code — never set from untrusted input.
         required: false
         type: string
         default: npm run build
       test-command:
-        description: Custom test command to run before packaging; set to empty string to skip
+        description: >-
+          Shell command to run before packaging; set to empty string to skip
+          (executed via bash -c on the runner). Treat as arbitrary code —
+          never set from untrusted input.
         required: false
         type: string
         default: npm test
@@ -82,6 +87,8 @@ jobs:
   package:
     name: Package MCPB Bundle
     runs-on: ${{ inputs.runs-on }}
+    permissions:
+      contents: write  # release asset upload; read suffices otherwise
     outputs:
       bundle-path: ${{ steps.pack.outputs.bundle-path }}
       bundle-sha256: ${{ steps.checksum.outputs.sha256 }}
@@ -345,6 +352,10 @@ jobs:
           fi
           # Strip path separators and leading dots to prevent path traversal
           BNAME=$(echo "$BNAME" | tr -d '/' | sed 's/^\.\+//')
+          if [ -z "$BNAME" ]; then
+            echo "::error::bundle-name resolves to empty after sanitization"
+            exit 1
+          fi
 
           VERSION=$(jq -r '.version' "$MANIFEST")
           VERSION=$(echo "$VERSION" | tr -cd 'a-zA-Z0-9._+-')

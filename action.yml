@@ -111,6 +111,10 @@ runs:
         fi
         # Strip path separators and leading dots to prevent path traversal
         BNAME=$(echo "$BNAME" | tr -d '/' | sed 's/^\.\+//')
+        if [ -z "$BNAME" ]; then
+          echo "::error::bundle-name resolves to empty after sanitization"
+          exit 1
+        fi
 
         VERSION=$(jq -r '.version' "$MANIFEST")
         VERSION=$(echo "$VERSION" | tr -cd 'a-zA-Z0-9._+-')

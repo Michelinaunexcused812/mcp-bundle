@@ -1680,6 +1680,112 @@ _test_vgp 'src/*.js&' "fail" 'src/*.js& (background operator)'
 _test_vgp '${HOME}/secrets' "fail" '${HOME}/secrets (variable expansion)'
 
 # ── Summary ──
+# --- BNAME guard tests ---
+echo ""
+echo "-- BNAME empty guard tests --"
+
+# Structural: workflow checks for empty BNAME after sanitization
+if grep -q '\-z.*BNAME' "$WORKFLOW"; then
+	pass "workflow checks for empty BNAME after sanitization"
+else
+	fail "workflow BNAME guard" \
+		"missing empty BNAME check after sanitization"
+fi
+
+# Structural: workflow emits ::error:: on empty BNAME
+if grep -A5 '\-z.*BNAME' "$WORKFLOW" | grep -q '::error::'; then
+	pass "workflow emits ::error:: on empty BNAME"
+else
+	fail "workflow BNAME guard" \
+		"missing ::error:: annotation for empty BNAME"
+fi
+
+# Structural: action.yml checks for empty BNAME after sanitization
+if grep -q '\-z.*BNAME' "$ACTION"; then
+	pass "action.yml checks for empty BNAME after sanitization"
+else
+	fail "action.yml BNAME guard" \
+		"missing empty BNAME check after sanitization"
+fi
+
+# Structural: action.yml emits ::error:: on empty BNAME
+if grep -A5 '\-z.*BNAME' "$ACTION" | grep -q '::error::'; then
+	pass "action.yml emits ::error:: on empty BNAME"
+else
+	fail "action.yml BNAME guard" \
+		"missing ::error:: annotation for empty BNAME"
+fi
+
+# Functional: BNAME guard logic correctly catches empty result
+_test_bname_guard() {
+	local input="$1" expect="$2" label="$3"
+	local result
+	result=$(echo "$input" | tr -d '/' | sed 's/^\.\+//')
+	local actual="non-empty"
+	[ -z "$result" ] && actual="empty"
+	if [ "$actual" = "$expect" ]; then
+		if [ "$actual" = "empty" ]; then
+			pass "BNAME guard functional: $label → empty (caught)"
+		else
+			pass "BNAME guard functional: $label → '$result' (safe)"
+		fi
+	else
+		fail "BNAME guard functional: $label" \
+			"expected $expect but got $actual${result:+ ('$result')}"
+	fi
+}
+
+_test_bname_guard "my-bundle" "non-empty" "clean name stays non-empty"
+_test_bname_guard "my/bundle" "non-empty" "slash-stripped name stays non-empty"
+_test_bname_guard "/" "empty" "lone slash → empty after tr"
+_test_bname_guard "//" "empty" "double slash → empty after tr"
+_test_bname_guard "..." "empty" "triple dot → empty after sed"
+_test_bname_guard ".." "empty" "double dot → empty after sed"
+_test_bname_guard "/../" "empty" "traversal pattern → empty after both"
+
+# --- build-command / test-command documentation tests ---
+echo ""
+echo "-- Build/test command documentation tests --"
+
+# Structural: build-command description warns about arbitrary/untrusted input
+if grep -A5 'build-command:' "$WORKFLOW" |
+	grep -qi 'arbitrary\|untrusted'; then
+	pass "workflow build-command description warns about arbitrary/untrusted input"
+else
+	fail "workflow docs" \
+		"build-command description missing arbitrary/untrusted warning"
+fi
+
+# Structural: test-command description warns about arbitrary/untrusted input
+if grep -A5 'test-command:' "$WORKFLOW" |
+	grep -qi 'arbitrary\|untrusted'; then
+	pass "workflow test-command description warns about arbitrary/untrusted input"
+else
+	fail "workflow docs" \
+		"test-command description missing arbitrary/untrusted warning"
+fi
+
+# --- Workflow permissions block tests ---
+echo ""
+echo "-- Workflow permissions block tests --"
+
+# Structural: workflow package job has a permissions block
+if grep -q 'permissions:' "$WORKFLOW"; then
+	pass "workflow package job has permissions block"
+else
+	fail "workflow permissions" \
+		"missing permissions block in workflow package job"
+fi
+
+# Structural: permissions block specifies contents:
+if grep -A5 'permissions:' "$WORKFLOW" | grep -q 'contents:'; then
+	pass "workflow permissions block specifies contents:"
+else
+	fail "workflow permissions" \
+		"permissions block missing contents: field"
+fi
+
+# ── Summary ──
 echo ""
 printf '\033[1;33m=== Results ===\033[0m\n'
 TOTAL=$((PASS + FAIL))
