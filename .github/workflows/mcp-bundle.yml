@@ -94,16 +94,16 @@ jobs:
       manifest-valid: ${{ steps.validate.outputs.valid }}
 
     steps:
-      # NOTE: Actions are pinned to mutable @v4 tags. For higher
+      # NOTE: Actions are pinned to mutable @v6 tags. For higher
       # supply-chain security, pin to full commit SHA digests.
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Checkout mcp-bundle action scripts
         # mirrors scripts/validate-manifest.sh from main via sparse checkout;
         # callers get updated validation automatically. For frozen/pinned
         # validation, use the composite action instead.
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           repository: zircote/mcp-bundle
           ref: main
@@ -125,7 +125,7 @@ jobs:
 
       - name: Setup Node.js
         if: steps.detect.outputs.server-type == 'node'
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version: ${{ inputs.node-version }}
           cache: npm
@@ -406,7 +406,7 @@ jobs:
 
       - name: Upload bundle artifact
         if: inputs.upload-artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: mcpb-bundle
           path: |

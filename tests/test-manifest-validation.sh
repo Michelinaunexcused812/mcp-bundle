@@ -1939,7 +1939,7 @@ else
 fi
 
 # Structural: action.yml has a SHA pin note near upload-artifact
-if grep -B5 'upload-artifact@v4' "$ACTION" | grep -qi 'mutable\|SHA'; then
+if grep -B5 'upload-artifact@v6' "$ACTION" | grep -qi 'mutable\|SHA'; then
 	pass "action.yml has SHA pin note near upload-artifact step"
 else
 	fail "action.yml SHA pin" \
