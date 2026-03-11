@@ -67,8 +67,7 @@ on:  # yamllint disable-line rule:truthy
         type: string
         default: latest
       runs-on:
-        description: >-
-          Runner label for the packaging job
+        description: Runner label for the packaging job
         required: false
         type: string
         default: ubuntu-latest
