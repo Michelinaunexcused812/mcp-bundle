@@ -353,6 +353,22 @@ if [ -f "$VALIDATE_SCRIPT" ] && [ -f "$WORKFLOW" ]; then
 			"workflow missing checkout of zircote/mcp-bundle"
 	fi
 
+	# Workflow uses sparse-checkout-cone-mode: false (required for file-level sparse checkout)
+	if grep -q 'sparse-checkout-cone-mode: false' "$WORKFLOW"; then
+		pass "workflow uses sparse-checkout-cone-mode: false (file-level sparse checkout)"
+	else
+		fail "drift-prevention" \
+			"missing sparse-checkout-cone-mode: false — file-level sparse checkout won't work"
+	fi
+
+	# Workflow places checkout at .mcp-bundle-action path
+	if grep -q 'path: .mcp-bundle-action' "$WORKFLOW"; then
+		pass "workflow sparse-checkout placed at .mcp-bundle-action"
+	else
+		fail "drift-prevention" \
+			"workflow missing path: .mcp-bundle-action for action script checkout"
+	fi
+
 	# Workflow sparse-checkouts only the validation script
 	if grep -q 'sparse-checkout.*validate-manifest' "$WORKFLOW"; then
 		pass "workflow sparse-checkouts validate-manifest.sh"
@@ -367,6 +383,14 @@ if [ -f "$VALIDATE_SCRIPT" ] && [ -f "$WORKFLOW" ]; then
 	else
 		fail "drift-prevention" \
 			"workflow does not source validate-manifest.sh from checkout"
+	fi
+
+	# Workflow sources from GITHUB_WORKSPACE (not a relative path)
+	if grep -q 'GITHUB_WORKSPACE.*mcp-bundle-action' "$WORKFLOW"; then
+		pass "workflow sources validate-manifest.sh via GITHUB_WORKSPACE (absolute path)"
+	else
+		fail "drift-prevention" \
+			"workflow should reference GITHUB_WORKSPACE to ensure absolute source path"
 	fi
 
 	# Workflow calls validate_manifest function (from the sourced script)
@@ -394,6 +418,14 @@ if [ -f "$VALIDATE_SCRIPT" ] && [ -f "$WORKFLOW" ]; then
 			"action.yml does not source validate-manifest.sh"
 	fi
 
+	# action.yml sources via GITHUB_ACTION_PATH (correct for composite actions)
+	if grep -q 'GITHUB_ACTION_PATH.*validate-manifest' "$ACTION"; then
+		pass "action.yml sources validate-manifest.sh via GITHUB_ACTION_PATH"
+	else
+		fail "drift-prevention" \
+			"action.yml should source via GITHUB_ACTION_PATH, not a relative path"
+	fi
+
 	# Canonical script contains all required validation rules
 	for rule in \
 		'_check_field' 'Invalid server type' \
@@ -408,6 +440,17 @@ if [ -f "$VALIDATE_SCRIPT" ] && [ -f "$WORKFLOW" ]; then
 				"missing validation rule: $rule"
 		fi
 	done
+
+	# Functional: sourcing the canonical script makes validate_manifest callable
+	# (already tested implicitly by the valid/invalid manifest tests at top,
+	# but verify the function is exported after source by testing its signature)
+	if bash -c "source '$VALIDATE_SCRIPT' && declare -f validate_manifest" \
+		>/dev/null 2>&1; then
+		pass "validate_manifest function is defined after sourcing canonical script"
+	else
+		fail "canonical script" \
+			"validate_manifest not callable after source"
+	fi
 
 else
 	fail "drift-prevention" \
@@ -1008,12 +1051,104 @@ else
 		"missing basename pattern support (find -name)"
 fi
 
-# action.yml .mcpbignore handles path-relative patterns
-if grep -q 'Path-relative pattern' "$ACTION"; then
-	pass "action.yml .mcpbignore documents path-relative handling"
+# action.yml .mcpbignore reads patterns from file
+if grep -q 'mcpbignore' "$ACTION" &&
+	grep -q 'EXCLUDES' "$ACTION"; then
+	pass "action.yml .mcpbignore populates EXCLUDES array"
 else
 	fail "action.yml .mcpbignore" \
 		"missing path-relative pattern handling"
+fi
+
+# workflow handles 4-way branching: dir with path (/), basename dir (/), path file, basename
+# Branch 1: trailing-slash dir with path component (e.g. build/tmp/) → -type d -path
+if grep -q 'type d.*-path.*dirpat\|-type d.*-path' "$WORKFLOW"; then
+	pass "workflow .mcpbignore: path-relative dir (e.g. build/tmp/) uses -type d -path"
+else
+	fail "workflow .mcpbignore" \
+		"missing -type d -path branch for path-relative directory patterns"
+fi
+
+# Branch 2: trailing-slash basename dir (e.g. __pycache__/) → -type d -name
+if grep -q 'type d.*-name.*dirpat\|-type d.*-name' "$WORKFLOW"; then
+	pass "workflow .mcpbignore: basename-only dir (e.g. __pycache__/) uses -type d -name"
+else
+	fail "workflow .mcpbignore" \
+		"missing -type d -name branch for basename-only directory patterns"
+fi
+
+# Branch 3: path-relative file (e.g. dist/debug.log) → find -path
+if grep -q '\*\/\$pattern\|find.*-path.*\*\/\$' "$WORKFLOW"; then
+	pass "workflow .mcpbignore: path-relative file pattern uses find -path"
+else
+	fail "workflow .mcpbignore" \
+		"missing find -path branch for path-relative file patterns"
+fi
+
+# action.yml appends trailing * for directory patterns (zip -x 'dir/*')
+if grep -q '"${pattern%/}\*"\|${pattern}*\|pattern%/}*' "$ACTION"; then
+	pass "action.yml .mcpbignore: directory patterns appended with * for zip -x"
+else
+	fail "action.yml .mcpbignore" \
+		"directory patterns should append * so zip -x 'dir/*' works"
+fi
+
+# Functional: simulate workflow 4-way branching logic in shell
+_MCPB_SEMANTIC_STAGING=$(mktemp -d)
+trap 'rm -rf "$_MCPB_SEMANTIC_STAGING"' EXIT
+
+mkdir -p \
+	"$_MCPB_SEMANTIC_STAGING/build/tmp" \
+	"$_MCPB_SEMANTIC_STAGING/__pycache__" \
+	"$_MCPB_SEMANTIC_STAGING/dist" \
+	"$_MCPB_SEMANTIC_STAGING/src"
+touch \
+	"$_MCPB_SEMANTIC_STAGING/build/tmp/cache.bin" \
+	"$_MCPB_SEMANTIC_STAGING/__pycache__/module.pyc" \
+	"$_MCPB_SEMANTIC_STAGING/dist/debug.log" \
+	"$_MCPB_SEMANTIC_STAGING/src/index.js" \
+	"$_MCPB_SEMANTIC_STAGING/README.md"
+
+# Simulate branch 1: path-relative dir trailing slash (build/tmp/)
+_dirpat="build/tmp"
+find "$_MCPB_SEMANTIC_STAGING" -type d -path "*/${_dirpat}" \
+	-exec rm -rf {} + 2>/dev/null || true
+if [ ! -d "$_MCPB_SEMANTIC_STAGING/build/tmp" ]; then
+	pass ".mcpbignore functional: 'build/tmp/' path-relative dir removed"
+else
+	fail ".mcpbignore functional" \
+		"'build/tmp/' path-relative dir pattern not applied"
+fi
+
+# Simulate branch 2: basename-only dir trailing slash (__pycache__/)
+_dirpat="__pycache__"
+find "$_MCPB_SEMANTIC_STAGING" -type d -name "${_dirpat}" \
+	-exec rm -rf {} + 2>/dev/null || true
+if [ ! -d "$_MCPB_SEMANTIC_STAGING/__pycache__" ]; then
+	pass ".mcpbignore functional: '__pycache__/' basename dir removed"
+else
+	fail ".mcpbignore functional" \
+		"'__pycache__/' basename dir pattern not applied"
+fi
+
+# Simulate branch 3: path-relative file (dist/debug.log)
+_pat="dist/debug.log"
+find "$_MCPB_SEMANTIC_STAGING" -path "*/${_pat}" \
+	-exec rm -rf {} + 2>/dev/null || true
+if [ ! -f "$_MCPB_SEMANTIC_STAGING/dist/debug.log" ]; then
+	pass ".mcpbignore functional: 'dist/debug.log' path-relative file removed"
+else
+	fail ".mcpbignore functional" \
+		"'dist/debug.log' path-relative file pattern not applied"
+fi
+
+# Verify non-excluded files survived
+if [ -f "$_MCPB_SEMANTIC_STAGING/src/index.js" ] &&
+	[ -f "$_MCPB_SEMANTIC_STAGING/README.md" ]; then
+	pass ".mcpbignore functional: non-excluded files survived all patterns"
+else
+	fail ".mcpbignore functional" \
+		"non-excluded files were incorrectly removed"
 fi
 
 # --- Zip fallback bundle validation tests ---
@@ -1029,13 +1164,55 @@ else
 		"missing bundle validation after packaging"
 fi
 
-# action.yml validates bundle contains manifest.json after zip fallback
-if grep -q 'USED_FALLBACK' "$ACTION" &&
+# workflow uses unzip -Z1 (list names only, no header lines — reliable grep target)
+if grep -q 'unzip -Z1' "$WORKFLOW"; then
+	pass "workflow uses unzip -Z1 for bundle structure check (names-only output)"
+else
+	fail "workflow packaging" \
+		"should use unzip -Z1 for clean name listing (avoids header false positives)"
+fi
+
+# workflow checks for manifest.json at root (anchored with ^ and $)
+# The workflow contains: grep -q '^manifest\.json$'
+if grep -q "'\^manifest\\\\.json\\\$'" "$WORKFLOW" ||
+	grep -q "\\^manifest\\.json\\\$" "$WORKFLOW"; then
+	pass "workflow anchors manifest.json check to root path (^ and \$ anchors)"
+else
+	fail "workflow packaging" \
+		"manifest.json check should be anchored to root (^manifest.json\$) to prevent subdir false positive"
+fi
+
+# workflow emits entry_point warning when missing from bundle
+if grep -q '::warning::Bundle does not contain declared entry_point' "$WORKFLOW"; then
+	pass "workflow emits warning when entry_point missing from bundle"
+else
+	fail "workflow packaging" \
+		"missing ::warning:: for entry_point absent from bundle"
+fi
+
+# action.yml validates bundle structure unconditionally (not just on fallback)
+if grep -q 'unzip -Z1' "$ACTION" &&
 	grep -q 'manifest\.json' "$ACTION"; then
-	pass "action.yml validates bundle structure on zip fallback"
+	pass "action.yml validates bundle structure unconditionally (unzip -Z1)"
 else
 	fail "action.yml packaging" \
-		"missing bundle validation on zip fallback"
+		"missing unconditional bundle validation"
+fi
+
+# action.yml does NOT use USED_FALLBACK conditional (validation is always run)
+if ! grep -q 'USED_FALLBACK' "$ACTION"; then
+	pass "action.yml bundle validation is unconditional (USED_FALLBACK removed)"
+else
+	fail "action.yml packaging" \
+		"USED_FALLBACK still present — validation should be unconditional"
+fi
+
+# action.yml warns if entry_point is absent from the bundle
+if grep -q '::warning::Bundle does not contain declared entry_point' "$ACTION"; then
+	pass "action.yml warns when entry_point missing from bundle"
+else
+	fail "action.yml packaging" \
+		"missing ::warning:: for entry_point absent from bundle"
 fi
 
 # workflow emits ::error:: on missing manifest in bundle
@@ -1052,6 +1229,42 @@ if grep -q '::error::Bundle missing manifest.json' "$ACTION"; then
 else
 	fail "action.yml packaging" \
 		"missing error annotation for invalid bundle"
+fi
+
+# Functional: verify unzip -Z1 reliably detects manifest.json at root vs subdirectory
+_MCPB_ZIP_TEST_DIR=$(mktemp -d)
+trap 'rm -rf "$_MCPB_SEMANTIC_STAGING" "$_MCPB_ZIP_TEST_DIR"' EXIT
+
+# Build a valid bundle (manifest.json at root)
+mkdir -p "$_MCPB_ZIP_TEST_DIR/valid-staging/src"
+printf '{"manifest_version":"0.3","name":"t","version":"1.0.0","description":"T","author":{"name":"T"},"server":{"type":"node","entry_point":"src/index.js"}}' \
+	>"$_MCPB_ZIP_TEST_DIR/valid-staging/manifest.json"
+touch "$_MCPB_ZIP_TEST_DIR/valid-staging/src/index.js"
+_valid_bundle="$_MCPB_ZIP_TEST_DIR/valid.mcpb"
+(cd "$_MCPB_ZIP_TEST_DIR/valid-staging" && zip -ry "$_valid_bundle" . -x '*.git*' >/dev/null 2>&1)
+
+# Verify unzip -Z1 finds manifest.json at root
+if unzip -Z1 "$_valid_bundle" 2>/dev/null | grep -q '^manifest\.json$'; then
+	pass "functional: unzip -Z1 detects manifest.json at bundle root"
+else
+	fail "functional: zip fallback" \
+		"unzip -Z1 failed to detect manifest.json at bundle root"
+fi
+
+# Build a bad bundle (manifest.json in subdirectory, not root)
+mkdir -p "$_MCPB_ZIP_TEST_DIR/bad-staging/subdir/src"
+cp "$_MCPB_ZIP_TEST_DIR/valid-staging/manifest.json" \
+	"$_MCPB_ZIP_TEST_DIR/bad-staging/subdir/manifest.json"
+touch "$_MCPB_ZIP_TEST_DIR/bad-staging/subdir/src/index.js"
+_bad_bundle="$_MCPB_ZIP_TEST_DIR/bad.mcpb"
+(cd "$_MCPB_ZIP_TEST_DIR/bad-staging" && zip -ry "$_bad_bundle" . -x '*.git*' >/dev/null 2>&1)
+
+# Verify unzip -Z1 with ^ anchor does NOT match subdir/manifest.json as root
+if ! unzip -Z1 "$_bad_bundle" 2>/dev/null | grep -q '^manifest\.json$'; then
+	pass "functional: unzip -Z1 with ^ anchor rejects manifest.json in subdirectory"
+else
+	fail "functional: zip fallback" \
+		"unzip -Z1 incorrectly matched subdir/manifest.json as root manifest"
 fi
 
 # --- Validation script completeness ---

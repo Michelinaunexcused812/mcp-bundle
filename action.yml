@@ -145,6 +145,8 @@ runs:
 
         BUNDLE_FILE="${BNAME}-${VERSION}.mcpb"
 
+        # Pack from working directory using mcpb (preferred) or zip (fallback).
+        # Exclusions come from .mcpbignore and zip -x patterns.
         EXCLUDES=("*.git*" "node_modules/*")
         if [ -f ".mcpbignore" ]; then
           while IFS= read -r pattern || [ -n "$pattern" ]; do
@@ -153,9 +155,6 @@ runs:
             [[ "$pattern" == \#* ]] && continue
             if [[ "$pattern" == */ ]]; then
               EXCLUDES+=("${pattern}*")
-            elif [[ "$pattern" == */* ]]; then
-              # Path-relative pattern: pass as-is to zip -x
-              EXCLUDES+=("$pattern")
             else
               EXCLUDES+=("$pattern")
             fi
@@ -167,22 +166,24 @@ runs:
           EXCLUDE_ARGS+=(-x "$pat")
         done
 
-        USED_FALLBACK=false
         if command -v mcpb &>/dev/null; then
-          mcpb pack --output "$BUNDLE_FILE" || {
+          mcpb pack --output "$BUNDLE_FILE" || \
             zip -ry "$BUNDLE_FILE" . "${EXCLUDE_ARGS[@]}"
-            USED_FALLBACK=true
-          }
         else
           zip -ry "$BUNDLE_FILE" . "${EXCLUDE_ARGS[@]}"
-          USED_FALLBACK=true
         fi
 
-        # Validate bundle structure when zip fallback was used
-        if [ "$USED_FALLBACK" = "true" ]; then
-          if ! unzip -l "$BUNDLE_FILE" | grep -q 'manifest\.json'; then
-            echo "::error::Bundle missing manifest.json"
-            exit 1
+        # Validate bundle structure
+        BUNDLE_CONTENTS=$(unzip -Z1 "$BUNDLE_FILE" 2>/dev/null || true)
+        if ! echo "$BUNDLE_CONTENTS" | grep -q '^manifest\.json$'; then
+          echo "::error::Bundle missing manifest.json — archive may be malformed"
+          exit 1
+        fi
+        ENTRY_POINT=$(jq -r '.server.entry_point // empty' "$MANIFEST")
+        if [ -n "$ENTRY_POINT" ]; then
+          ENTRY_REL="${ENTRY_POINT#./}"
+          if ! echo "$BUNDLE_CONTENTS" | grep -qF "$ENTRY_REL"; then
+            echo "::warning::Bundle does not contain declared entry_point: ${ENTRY_REL}"
           fi
         fi
 
