@@ -21,3 +21,6 @@ coverage/
 # Environment
 .env
 .env.local
+
+# Autoresearch workspaces
+*-autoresearch/
